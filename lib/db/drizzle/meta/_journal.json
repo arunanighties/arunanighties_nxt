@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1777542798457,
+      "tag": "0000_swift_warpath",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1778047599353,
+      "tag": "0001_cheerful_ultimates",
+      "breakpoints": true
+    }
+  ]
+}

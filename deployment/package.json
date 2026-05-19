@@ -1,0 +1,25 @@
+{
+  "name": "aruna-api-prod",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "index.mjs",
+  "scripts": {
+    "build": "echo 'Pre-built — no build step needed'",
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.4.3",
+    "@google-cloud/storage": "^7.19.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2",
+    "drizzle-orm": "^0.45.1",
+    "express": "^5",
+    "firebase-admin": "^13.9.0",
+    "google-auth-library": "^10.6.2",
+    "mysql2": "^3.12.0",
+    "node-cron": "^4.2.1",
+    "pino": "^9",
+    "pino-http": "^10",
+    "razorpay": "^2.9.2"
+  }
+}
