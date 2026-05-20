@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
 import * as schema from "./schema";
 
+// Initialize client with Turso / SQLite connection URL
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
