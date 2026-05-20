@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, ordersTable, productsTable } from "@/db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { isAdminAuthorized } from "@/lib/adminAuth";
 import { logger } from "@/lib/serverLogger";
 
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     const orders = await db
       .select()
       .from(ordersTable)
-      .orderBy(ordersTable.createdAt);
+      .orderBy(desc(ordersTable.createdAt));
     return NextResponse.json(orders);
   } catch (error: any) {
     logger.error({ error: error.message }, "Failed to fetch orders");

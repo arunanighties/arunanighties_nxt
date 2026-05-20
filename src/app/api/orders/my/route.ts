@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, ordersTable } from "@/db";
-import { eq, or } from "drizzle-orm";
+import { eq, or, desc } from "drizzle-orm";
 import { logger } from "@/lib/serverLogger";
 
 export async function GET(request: NextRequest) {
@@ -21,19 +21,19 @@ export async function GET(request: NextRequest) {
         .select()
         .from(ordersTable)
         .where(or(eq(ordersTable.userId, userId), eq(ordersTable.phone, phone)))
-        .orderBy(ordersTable.createdAt);
+        .orderBy(desc(ordersTable.createdAt));
     } else if (userId) {
       orders = await db
         .select()
         .from(ordersTable)
         .where(eq(ordersTable.userId, userId))
-        .orderBy(ordersTable.createdAt);
+        .orderBy(desc(ordersTable.createdAt));
     } else {
       orders = await db
         .select()
         .from(ordersTable)
         .where(eq(ordersTable.phone, phone))
-        .orderBy(ordersTable.createdAt);
+        .orderBy(desc(ordersTable.createdAt));
     }
 
     return NextResponse.json(orders);

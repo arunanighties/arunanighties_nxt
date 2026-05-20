@@ -1137,7 +1137,7 @@ export default function AdminDashboard() {
     setOrdersLoading(true);
     try {
       const res = await fetchWithAuth("/orders");
-      if (res.ok) setOrders((await res.json()).reverse());
+      if (res.ok) setOrders((await res.json()).sort((a: any, b: any) => Number(b.id) - Number(a.id)));
     } finally { setOrdersLoading(false); }
   };
 

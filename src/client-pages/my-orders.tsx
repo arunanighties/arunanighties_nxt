@@ -616,7 +616,7 @@ function OrdersTab({ user }: { user: { id: number; phone: string; name?: string 
       .then((data: Order[]) => {
         if (Array.isArray(data)) {
           const unique = Array.from(new Map(data.map((o) => [o.id, o])).values());
-          setOrders(unique.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+          setOrders(unique.sort((a, b) => Number(b.id) - Number(a.id)));
         }
       })
       .catch(() => toast({ variant: "destructive", title: "Network error loading orders." }))
