@@ -2,11 +2,15 @@ import { drizzle } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
 import * as schema from "./schema";
 
-// Initialize client with Turso / SQLite connection URL
-const databaseUrl = process.env.DATABASE_URL;
+// Determine the database URL, falling back to TURSO_DATABASE_URL if DATABASE_URL is missing
+// or is an unsupported legacy protocol (like mysql/postgres)
+let databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl || databaseUrl.startsWith("mysql:") || databaseUrl.startsWith("postgresql:") || databaseUrl.startsWith("postgres:")) {
+  databaseUrl = process.env.TURSO_DATABASE_URL;
+}
 
 if (!databaseUrl) {
-  throw new Error("DATABASE_URL is not set");
+  throw new Error("Neither DATABASE_URL nor TURSO_DATABASE_URL is set");
 }
 
 console.log("Database connection initializing with URL:", databaseUrl.replace(/:[^:@]+@/, ":****@"));
