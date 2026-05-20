@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 export default function OurStory() {
   useEffect(() => {
     document.title = "Our Story & Heritage | Aruna Nighties";
-    
+
     let metaDesc = document.querySelector('meta[name="description"]');
     if (!metaDesc) {
       metaDesc = document.createElement('meta');
@@ -41,7 +41,7 @@ export default function OurStory() {
                 <div className="absolute -inset-4 bg-primary/10 rounded-[2rem] blur-2xl group-hover:bg-primary/20 transition-colors duration-500" />
                 <div className="relative aspect-[3/4] max-w-sm mx-auto rounded-[2rem] overflow-hidden shadow-2xl">
                   <img
-                    src="/our-story.png"
+                    src="/our-story.jpeg"
                     alt="Aruna Nighties Craftsmanship"
                     className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105"
                     onError={(e) => {

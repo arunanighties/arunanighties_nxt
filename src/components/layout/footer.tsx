@@ -17,7 +17,9 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-1 md:col-span-1">
             <Link href="/" className="flex items-center gap-2 font-serif text-2xl font-semibold tracking-wide mb-3 inline-block">
-              <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain brightness-0 invert" />
+              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-1 flex-shrink-0">
+                <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+              </div>
               <span>Aruna Nighties</span>
             </Link>
             <p className="text-primary-foreground/70 text-sm max-w-xs leading-relaxed">
