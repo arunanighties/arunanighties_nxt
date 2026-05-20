@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
-import { MapPin, CreditCard, CheckCircle2, Loader2, ShoppingBag, Package, ArrowLeft, ShieldCheck } from "lucide-react";
+import { MapPin, CreditCard, CheckCircle2, Loader2, ShoppingBag, Package, ArrowLeft, ShieldCheck, Trash2 } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { useCart } from "@/context/cart";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,7 @@ const PAYMENT_METHODS = [
 
 export default function CheckoutPage() {
   const [, setLocation] = useLocation();
-  const { items, totalPrice, clearCart } = useCart();
+  const { items, totalPrice, clearCart, removeItem } = useCart();
   const { toast } = useToast();
 
   const [step, setStep] = useState<Step>("address");
@@ -495,7 +495,12 @@ export default function CheckoutPage() {
                             )}
                           </div>
                         </div>
-                        <p className="text-sm font-bold text-rose-700 flex-shrink-0">{formatINR(item.price * item.quantity)}</p>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <p className="text-sm font-bold text-rose-700">{formatINR(item.price * item.quantity)}</p>
+                          <button onClick={() => removeItem(item.cartItemId)} className="text-rose-400 hover:text-red-500 transition-colors p-1" title="Remove item">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -566,7 +571,12 @@ export default function CheckoutPage() {
                             )}
                           </div>
                         </div>
-                        <p className="text-xs font-bold text-rose-700 flex-shrink-0">{formatINR(item.price * item.quantity)}</p>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <p className="text-xs font-bold text-rose-700">{formatINR(item.price * item.quantity)}</p>
+                          <button onClick={() => removeItem(item.cartItemId)} className="text-rose-300 hover:text-red-500 transition-colors p-1" title="Remove item">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
