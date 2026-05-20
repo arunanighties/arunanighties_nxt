@@ -34,12 +34,11 @@ export async function POST(request: NextRequest) {
     let user = existingUsers[0];
 
     if (!user) {
-      const [result] = await db.insert(usersTable).values({ 
+      const [newUser] = await db.insert(usersTable).values({ 
         phone, 
         email: null,
         name: null
-      });
-      const [newUser] = await db.select().from(usersTable).where(eq(usersTable.id, result.insertId));
+      }).returning();
       user = newUser;
     }
 

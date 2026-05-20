@@ -1,24 +1,24 @@
-import { mysqlTable, text, int, timestamp, decimal, varchar, json } from "drizzle-orm/mysql-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const ordersTable = mysqlTable("orders", {
-  id: int("id").primaryKey().autoincrement(),
-  userId: int("user_id"),
-  customerName: varchar("customer_name", { length: 255 }).notNull(),
-  email: varchar("email", { length: 255 }).notNull(),
-  phone: varchar("phone", { length: 20 }),
+export const ordersTable = sqliteTable("orders", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id"),
+  customerName: text("customer_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
   items: text("items"),
   address: text("address"),
-  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
-  status: varchar("status", { length: 50 }).notNull().default("pending"),
-  razorpayOrderId: varchar("razorpay_order_id", { length: 255 }),
-  razorpayPaymentId: varchar("razorpay_payment_id", { length: 255 }),
-  razorpaySignature: varchar("razorpay_signature", { length: 255 }),
-  paymentStatus: varchar("payment_status", { length: 50 }).notNull().default("pending"),
-  awbNumber: varchar("awb_number", { length: 50 }),
-  shippingDetails: json("shipping_details"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  total: real("total").notNull(),
+  status: text("status").notNull().default("pending"),
+  razorpayOrderId: text("razorpay_order_id"),
+  razorpayPaymentId: text("razorpay_payment_id"),
+  razorpaySignature: text("razorpay_signature"),
+  paymentStatus: text("payment_status").notNull().default("pending"),
+  awbNumber: text("awb_number"),
+  shippingDetails: text("shipping_details", { mode: "json" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
 export const insertOrderSchema = createInsertSchema(ordersTable).omit({

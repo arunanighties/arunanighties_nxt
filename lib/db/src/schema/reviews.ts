@@ -1,23 +1,20 @@
 import {
-  mysqlTable,
+  sqliteTable,
   text,
-  int,
-  timestamp,
-  json,
-  varchar,
-} from "drizzle-orm/mysql-core";
+  integer,
+} from "drizzle-orm/sqlite-core";
 
-export const reviewsTable = mysqlTable("reviews", {
-  id: int("id").primaryKey().autoincrement(),
-  productId: int("product_id").notNull(),
-  userId: int("user_id"),
-  userName: varchar("user_name", { length: 255 }).notNull().default("Anonymous"),
-  rating: int("rating").notNull().default(5),
-  title: varchar("title", { length: 255 }).notNull(),
+export const reviewsTable = sqliteTable("reviews", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  productId: integer("product_id").notNull(),
+  userId: integer("user_id"),
+  userName: text("user_name").notNull().default("Anonymous"),
+  rating: integer("rating").notNull().default(5),
+  title: text("title").notNull(),
   comment: text("comment").notNull(),
-  imageUrls: json("image_urls").$type<string[]>().notNull(),
-  helpfulCount: int("helpful_count").notNull().default(0),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  imageUrls: text("image_urls", { mode: "json" }).$type<string[]>().notNull(),
+  helpfulCount: integer("helpful_count").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
 export type Review = typeof reviewsTable.$inferSelect;

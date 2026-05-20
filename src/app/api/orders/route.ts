@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        const [insertResult] = await tx
+        const [newOrder] = await tx
           .insert(ordersTable)
           .values({
             userId: parsedUserId && !isNaN(parsedUserId) ? parsedUserId : null,
@@ -151,15 +151,11 @@ export async function POST(request: NextRequest) {
             phone: phone ? String(phone) : null,
             items: JSON.stringify(updatedItemsArray),
             address: address ? String(address) : null,
-            total: String(parseFloat(total).toFixed(2)),
+            total: parseFloat(total),
             status: "pending",
             paymentStatus: "pending",
-          });
-
-        const [newOrder] = await tx
-          .select()
-          .from(ordersTable)
-          .where(eq(ordersTable.id, insertResult.insertId));
+          })
+          .returning();
 
         return newOrder;
       });

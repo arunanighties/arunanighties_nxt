@@ -65,7 +65,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const reviewCount = allReviews.length;
     const ratingSum = allReviews.reduce((sum, r) => sum + (r.rating ?? 0), 0);
-    const avgRating = reviewCount > 0 ? (ratingSum / reviewCount).toFixed(1) : "4.3";
+    const avgRating = reviewCount > 0 ? parseFloat((ratingSum / reviewCount).toFixed(1)) : 4.3;
 
     await db
       .update(productsTable)

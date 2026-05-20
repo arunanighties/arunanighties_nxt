@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        const [insertResult] = await tx
+        const [newOrder] = await tx
           .insert(ordersTable)
           .values({
             userId: parsedUserId && !isNaN(parsedUserId) ? parsedUserId : null,
@@ -142,15 +142,16 @@ export async function POST(request: NextRequest) {
             phone: phone ? String(phone) : null,
             items: JSON.stringify(updatedItemsArray),
             address: address ? String(address) : null,
-            total: String(parseFloat(total).toFixed(2)),
+            total: parseFloat(total),
             status: "pending",
             paymentStatus: "paid",
             razorpayOrderId: razorpay_order_id as string,
             razorpayPaymentId: razorpay_payment_id as string,
             razorpaySignature: razorpay_signature as string,
-          });
+          })
+          .returning();
 
-        return insertResult.insertId;
+        return newOrder.id;
       });
 
       return NextResponse.json({ 

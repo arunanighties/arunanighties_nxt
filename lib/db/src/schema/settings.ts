@@ -1,10 +1,10 @@
-import { mysqlTable, text, int, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 
-export const siteSettingsTable = mysqlTable("site_settings", {
-  id: int("id").primaryKey().autoincrement(),
-  key: varchar("key", { length: 255 }).notNull().unique(),
+export const siteSettingsTable = sqliteTable("site_settings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  key: text("key").notNull().unique(),
   value: text("value").notNull(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
 });
 
 export type SiteSetting = typeof siteSettingsTable.$inferSelect;

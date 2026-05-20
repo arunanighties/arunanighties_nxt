@@ -1,20 +1,18 @@
 import {
-  mysqlTable,
+  sqliteTable,
   text,
-  int,
-  timestamp,
-  varchar,
-} from "drizzle-orm/mysql-core";
+  integer,
+} from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const usersTable = mysqlTable("users", {
-  id: int("id").primaryKey().autoincrement(),
-  phone: varchar("phone", { length: 20 }).notNull().unique(),
-  name: varchar("name", { length: 255 }),
-  email: varchar("email", { length: 255 }).unique(),
+export const usersTable = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  phone: text("phone").notNull().unique(),
+  name: text("name"),
+  email: text("email").unique(),
   addresses: text("addresses"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
 

@@ -1,10 +1,10 @@
-import { mysqlTable, text, int, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 
-export const homepageSectionsTable = mysqlTable("homepage_sections", {
-  id: int("id").primaryKey().autoincrement(),
-  name: varchar("name", { length: 255 }).notNull().unique(),
-  position: int("position").notNull().default(0),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+export const homepageSectionsTable = sqliteTable("homepage_sections", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  position: integer("position").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
 export type HomepageSection = typeof homepageSectionsTable.$inferSelect;

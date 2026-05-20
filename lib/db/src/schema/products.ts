@@ -1,34 +1,31 @@
 import {
-  mysqlTable,
+  sqliteTable,
   text,
-  int,
-  timestamp,
-  decimal,
-  json,
-  varchar,
-} from "drizzle-orm/mysql-core";
+  integer,
+  real,
+} from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const productsTable = mysqlTable("products", {
-  id: int("id").primaryKey().autoincrement(),
-  name: varchar("name", { length: 255 }).notNull(),
+export const productsTable = sqliteTable("products", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
   description: text("description").notNull(),
   imageUrl: text("image_url").notNull(),
-  stock: int("stock").notNull().default(0),
-  categoryId: int("category_id"),
-  sectionId: int("section_id"),
-  rating: decimal("rating", { precision: 3, scale: 1 }).notNull().default("4.3"),
-  reviewCount: int("review_count").notNull().default(1),
+  stock: integer("stock").notNull().default(0),
+  categoryId: integer("category_id"),
+  sectionId: integer("section_id"),
+  rating: real("rating").notNull().default(4.3),
+  reviewCount: integer("review_count").notNull().default(1),
   reviewText: text("review_text").notNull(),
-  images: json("images").$type<string[]>().notNull(),
-  sizes: json("sizes").$type<{ size: string; quantity: number }[]>().notNull(),
-  inventory: json("inventory").$type<Record<string, Record<string, { hex: string; qty: number; price: number; mrp: number }>>>().default({}),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
+  images: text("images", { mode: "json" }).$type<string[]>().notNull(),
+  sizes: text("sizes", { mode: "json" }).$type<{ size: string; quantity: number }[]>().notNull(),
+  inventory: text("inventory", { mode: "json" }).$type<Record<string, Record<string, { hex: string; qty: number; price: number; mrp: number }>>>().default({}),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
-    .defaultNow()
-    .onUpdateNow(),
+    .$defaultFn(() => new Date())
+    .$onUpdateFn(() => new Date()),
 });
 
 export const insertProductSchema = createInsertSchema(productsTable).omit({

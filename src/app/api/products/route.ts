@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     const primaryImage = imagesArr[0] ?? (typeof imageUrl === "string" ? imageUrl.trim() : "");
     const reviewCountNum = reviewCount !== undefined ? parseInt(String(reviewCount), 10) || 1 : 1;
 
-    const result = await db
+    const [newProduct] = await db
       .insert(productsTable)
       .values({
         name: String(name).trim(),
@@ -96,13 +96,12 @@ export async function POST(request: NextRequest) {
         sizes: sizesArr,
         inventory: finalInventory,
         stock: stockNum,
-        categoryId: categoryId ? parseInt(String(categoryId), 10) : null,
-        rating: rating !== undefined && !isNaN(parseFloat(rating)) ? String(parseFloat(rating).toFixed(1)) : "4.3",
+        categoryId: categoryId ? parseInt(String(categoryId), 10) : undefined,
+        rating: rating !== undefined && !isNaN(parseFloat(rating)) ? parseFloat(parseFloat(rating).toFixed(1)) : 4.3,
         reviewCount: reviewCountNum,
         reviewText: typeof reviewText === "string" ? reviewText.trim() : "",
-      });
-
-    const [newProduct] = await db.select().from(productsTable).where(eq(productsTable.id, result[0].insertId));
+      })
+      .returning();
     return NextResponse.json(newProduct, { status: 201 });
   } catch (error: any) {
     console.error("DEBUG: Failed to create product:", error);

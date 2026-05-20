@@ -1,11 +1,11 @@
-import { mysqlTable, text, int, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 
-export const categoriesTable = mysqlTable("categories", {
-  id: int("id").primaryKey().autoincrement(),
-  name: varchar("name", { length: 255 }).notNull().unique(),
+export const categoriesTable = sqliteTable("categories", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
   description: text("description").notNull(),
-  icon: varchar("icon", { length: 255 }).notNull().default("🌸"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  icon: text("icon").notNull().default("🌸"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
 export type Category = typeof categoriesTable.$inferSelect;

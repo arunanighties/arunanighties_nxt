@@ -38,11 +38,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Section name is required." }, { status: 400 });
     }
 
-    const result = await db
+    const [section] = await db
       .insert(homepageSectionsTable)
-      .values({ name, position });
-    
-    const [section] = await db.select().from(homepageSectionsTable).where(eq(homepageSectionsTable.id, result[0].insertId));
+      .values({ name, position })
+      .returning();
     return NextResponse.json({ ...section, products: [] }, { status: 201 });
   } catch (err: any) {
     console.error("DEBUG: Failed to create section:", err);

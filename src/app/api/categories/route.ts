@@ -28,10 +28,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Category name is required" }, { status: 400 });
     }
 
-    const result = await db
+    const [category] = await db
       .insert(categoriesTable)
-      .values({ name, description, icon });
-    const [category] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, result[0].insertId));
+      .values({ name, description, icon })
+      .returning();
     return NextResponse.json(category, { status: 201 });
   } catch (err: any) {
     console.error("DEBUG: Failed to create category:", err);
