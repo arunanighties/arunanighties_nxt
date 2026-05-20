@@ -6,7 +6,7 @@
 import { trackShipmentMock, advanceMockStage, rewindMockStage } from "./mock.service";
 export { advanceMockStage, rewindMockStage };
 
-import { trackShipmentXpressbees, generateShipmentXpressbees, requestPickupXpressbees, getXpressbeesCouriers } from "./xpressbees.service";
+import { trackShipmentXpressbees, generateShipmentXpressbees, requestPickupXpressbees, getXpressbeesCouriers, cancelShipmentXpressbees } from "./xpressbees.service";
 import { logger } from "../../lib/serverLogger";
 
 const USE_MOCK_SHIPPING = process.env.USE_MOCK_SHIPPING === "true";
@@ -73,6 +73,22 @@ export const getCouriers = async () => {
   } else {
     const result = (await getXpressbeesCouriers()) as any;
     return Array.isArray(result) ? result : (result.data || []);
+  }
+};
+
+/**
+ * Cancels a shipment by AWB number.
+ */
+export const cancelShipment = async (awbNumber: string) => {
+  if (USE_MOCK_SHIPPING) {
+    logger.info({ awb: awbNumber }, "Mocking Cancel Shipment Request");
+    return {
+      response: true,
+      status: true,
+      message: "Mock Cancellation Successful"
+    };
+  } else {
+    return await cancelShipmentXpressbees(awbNumber);
   }
 };
 

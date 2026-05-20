@@ -36,6 +36,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { getApiBase } from "@/lib/api-config";
 import { ShippingDimensionsModal } from "@/components/orders/ShippingDimensionsModal";
+import { CancelShipmentModal } from "@/components/admin/orders/cancel-shipment-modal";
 
 const apiBase = getApiBase;
 
@@ -441,6 +442,46 @@ function AdminOrderCard({
 }) {
   const queryClient = useQueryClient();
   const isExpanded = expandedOrderId === order.id;
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+
+  const handleCancelShipment = async () => {
+    try {
+      const res = await adminFetch("/shipping/cancel", {
+        method: "POST",
+        body: JSON.stringify({
+          orderId: order.id,
+          awbNumber: order.awbNumber,
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setOrders((prev: Order[]) =>
+          prev.map((o) => (o.id === updated.id ? updated : o))
+        );
+        queryClient.invalidateQueries();
+        toast({
+          title: "Shipment Cancelled",
+          description: `Shipment for order #${String(order.id).padStart(4, "0")} has been cancelled successfully.`,
+        });
+      } else {
+        const err = await res.json();
+        toast({
+          variant: "destructive",
+          title: "Cancellation Failed",
+          description: err.error || err.message || "Failed to cancel shipment.",
+        });
+        throw new Error(err.error || "Failed to cancel shipment");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Network Error",
+        description: err.message || "Failed to connect to the server.",
+      });
+      throw err;
+    }
+  };
   const sDetailsRaw = order.shippingDetails || (order as any).shipping_details || "{}";
   const sDetails = typeof sDetailsRaw === "string" ? (sDetailsRaw.startsWith("{") ? JSON.parse(sDetailsRaw) : {}) : (sDetailsRaw || {});
 
@@ -665,7 +706,7 @@ function AdminOrderCard({
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest leading-none mb-1.5">Tracking Number (AWB)</p>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 flex-wrap">
                             <p className="font-mono font-bold text-purple-900 text-base">{order.awbNumber}</p>
                             <a
                               href={`https://www.xpressbees.com/shipment/tracking?awbNo=${order.awbNumber}`}
@@ -675,6 +716,14 @@ function AdminOrderCard({
                             >
                               Track on Xpressbees ↗
                             </a>
+                            <span className="text-purple-200">•</span>
+                            <button
+                              type="button"
+                              onClick={() => setIsCancelModalOpen(true)}
+                              className="text-red-500 hover:text-red-700 hover:underline text-sm font-medium flex items-center gap-1"
+                            >
+                              Cancel Shipment
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -833,6 +882,14 @@ function AdminOrderCard({
             </div>
           </div>
         </div>
+      )}
+      {order.awbNumber && (
+        <CancelShipmentModal
+          isOpen={isCancelModalOpen}
+          onClose={() => setIsCancelModalOpen(false)}
+          awbNumber={order.awbNumber}
+          onConfirm={handleCancelShipment}
+        />
       )}
     </div>
   );
