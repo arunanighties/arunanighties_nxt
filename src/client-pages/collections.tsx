@@ -139,7 +139,7 @@ export default function Collections() {
 
       {/* WhatsApp FAB */}
       <a
-        href="https://wa.me/919876543210"
+        href="https://wa.me/918125210950"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 bg-[#25D366] hover:bg-[#20b858] text-white rounded-full shadow-lg shadow-green-200 transition-transform hover:scale-110 active:scale-95"

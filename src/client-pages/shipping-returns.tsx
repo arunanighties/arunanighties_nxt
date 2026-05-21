@@ -106,12 +106,12 @@ export default function ShippingReturns() {
             <p className="text-rose-700 font-medium mb-1">Need help with a return or order?</p>
             <p className="text-rose-600/70 text-sm">
               WhatsApp us at{" "}
-              <a href="https://wa.me/919876543210" className="text-primary font-semibold underline">
-                +91 98765 43210
+              <a href="https://wa.me/918125210950" className="text-primary font-semibold underline">
+                +91 81252 10950
               </a>{" "}
               or email{" "}
-              <a href="mailto:support@arunanighties.in" className="text-primary font-semibold underline">
-                support@arunanighties.in
+              <a href="mailto:arunanighties23@gmail.com" className="text-primary font-semibold underline">
+                arunanighties23@gmail.com
               </a>
             </p>
           </div>

@@ -943,7 +943,24 @@ export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTabState] = useState<Tab>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab") as Tab;
+      if (tab) return tab;
+      return (localStorage.getItem("adminActiveTab") as Tab) || "overview";
+    }
+    return "overview";
+  });
+
+  const setActiveTab = (tab: Tab) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("adminActiveTab", tab);
+      window.location.href = `${window.location.pathname}?tab=${tab}`;
+    } else {
+      setActiveTabState(tab);
+    }
+  };
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Orders + Stats

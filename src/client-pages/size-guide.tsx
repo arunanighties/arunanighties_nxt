@@ -105,8 +105,8 @@ export default function SizeGuide() {
             <p className="text-rose-700 font-medium text-sm mb-1">Still not sure about your size?</p>
             <p className="text-rose-600/70 text-xs">
               WhatsApp us at{" "}
-              <a href="https://wa.me/919876543210" className="text-primary font-semibold underline">
-                +91 98765 43210
+              <a href="https://wa.me/918125210950" className="text-primary font-semibold underline">
+                +91 81252 10950
               </a>{" "}
               — our team will help you choose the perfect fit.
             </p>

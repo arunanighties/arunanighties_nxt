@@ -157,7 +157,7 @@ export default function Home() {
           <>
             {sections.map((section) => (
               section.products.length > 0 && (
-                <section key={section.id} className="py-16 bg-background border-b border-pink-50 last:border-b-0">
+                <section key={section.id} className="py-8 bg-background border-b border-pink-50 last:border-b-0">
                   <div className="container mx-auto px-4 md:px-6">
                     <div className="flex items-end justify-between mb-6">
                       <div>
@@ -179,7 +179,7 @@ export default function Home() {
 
             {/* ── Unsectioned products under the default section ── */}
             {unsectionedProducts.length > 0 && (
-              <section className="py-16 bg-background">
+              <section className="py-8 bg-background">
                 <div className="container mx-auto px-4 md:px-6">
                   <div className="flex items-end justify-between mb-6">
                     <div>
@@ -201,7 +201,7 @@ export default function Home() {
           </>
         ) : (
           /* ── No sections yet: show all products in the default section ── */
-          <section className="py-20 bg-background">
+          <section className="py-10 bg-background">
             <div className="container mx-auto px-4 md:px-6">
               <div className="flex items-end justify-between mb-10">
                 <div>
@@ -273,7 +273,7 @@ export default function Home() {
 
       {/* ── WhatsApp FAB ──────────── */}
       <a
-        href="https://wa.me/919876543210"
+        href="https://wa.me/918125210950"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 bg-[#25D366] hover:bg-[#20b858] text-white rounded-full shadow-lg shadow-green-200 transition-transform hover:scale-110 active:scale-95"

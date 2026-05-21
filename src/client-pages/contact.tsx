@@ -4,15 +4,16 @@ import { Phone, Mail, MapPin, MessageCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const contactInfo = [
-  { icon: Phone, label: "Phone", value: "+91 98765 43210", href: "tel:+919876543210" },
-  { icon: MessageCircle, label: "WhatsApp", value: "+91 98765 43210", href: "https://wa.me/919876543210" },
-  { icon: Mail, label: "Email", value: "support@arunanighties.in", href: "mailto:support@arunanighties.in" },
-  { icon: MapPin, label: "Address", value: "123, Cotton Mills Road, Coimbatore – 641001, Tamil Nadu", href: undefined },
+  { icon: Phone, label: "Phone", value: "+91 81252 10950", href: "tel:+918125210950" },
+  { icon: MessageCircle, label: "WhatsApp", value: "+91 81252 10950", href: "https://wa.me/918125210950" },
+  { icon: Mail, label: "Email", value: "arunanighties23@gmail.com", href: "mailto:arunanighties23@gmail.com" },
+  { icon: MapPin, label: "Address", value: "3-5-158 Aruna Nighties, Opp. Bharthagas, Jammigadda, Suryapet - 508213", href: undefined },
 ];
 
 export default function Contact() {
   const [form, setForm] = useState({ name: "", phone: "", message: "" });
   const [sent, setSent] = useState(false);
+  const [whatsappUrl, setWhatsappUrl] = useState("");
 
   useEffect(() => {
     document.title = "Contact Us | Aruna Nighties";
@@ -23,7 +24,7 @@ export default function Contact() {
       metaDesc.setAttribute('name', 'description');
       document.head.appendChild(metaDesc);
     }
-    metaDesc.setAttribute('content', "Get in touch with Aruna Nighties for wholesale orders, queries, custom fits, or support. WhatsApp/call us at +91 98765 43210.");
+    metaDesc.setAttribute('content', "Get in touch with Aruna Nighties for wholesale orders, queries, custom fits, or support. WhatsApp/call us at +91 81252 10950.");
 
     let metaKeywords = document.querySelector('meta[name="keywords"]');
     if (!metaKeywords) {
@@ -36,6 +37,10 @@ export default function Contact() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const text = `Hello Aruna Nighties,\n\nName: ${form.name}\nPhone: ${form.phone}\n\nMessage:\n${form.message}`;
+    const url = `https://wa.me/918125210950?text=${encodeURIComponent(text)}`;
+    setWhatsappUrl(url);
+    window.open(url, "_blank");
     setSent(true);
   };
 
@@ -76,20 +81,24 @@ export default function Contact() {
                 ))}
               </div>
 
-              <div className="mt-6 bg-green-50 border border-green-100 rounded-2xl p-5">
-                <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">⏰ Business Hours</p>
-                <p className="text-sm text-green-800">Monday – Saturday: 9 AM – 7 PM</p>
-                <p className="text-sm text-green-800">Sunday: 10 AM – 4 PM</p>
-              </div>
+
             </div>
 
             <div>
               <h2 className="font-serif text-2xl font-bold text-rose-900 mb-6">Send a Message</h2>
               {sent ? (
                 <div className="bg-green-50 border border-green-200 rounded-2xl p-8 text-center">
-                  <div className="text-4xl mb-3">🎉</div>
-                  <h3 className="font-semibold text-green-800 mb-1">Message sent!</h3>
-                  <p className="text-sm text-green-700">We'll get back to you within 24 hours.</p>
+                  <div className="text-4xl mb-3">💬</div>
+                  <h3 className="font-semibold text-green-800 mb-1">Opening WhatsApp...</h3>
+                  <p className="text-sm text-green-700 mb-4">Your message is prepared to be sent via WhatsApp.</p>
+                  <a 
+                    href={whatsappUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="inline-block bg-[#25D366] hover:bg-[#20b858] text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition-colors shadow-sm"
+                  >
+                    Click to Open WhatsApp
+                  </a>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="bg-white border border-pink-100 rounded-2xl p-6 shadow-sm space-y-4">
@@ -117,7 +126,7 @@ export default function Contact() {
                         const val = e.target.value.replace(/\D/g, "").slice(0, 10);
                         setForm((f) => ({ ...f, phone: val }));
                       }}
-                      placeholder="e.g. 9876543210"
+                      placeholder="e.g. 8125210950"
                       className="w-full border border-pink-200 rounded-xl px-4 py-2.5 text-sm bg-pink-50 focus:outline-none focus:ring-2 focus:ring-primary/30 text-rose-900 placeholder:text-rose-300"
                     />
                   </div>

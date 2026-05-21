@@ -77,7 +77,7 @@ export function Footer() {
 
             {/* WhatsApp CTA */}
             <a
-              href="https://wa.me/919876543210"
+              href="https://wa.me/918125210950"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 mt-4 text-sm font-medium text-white/80 hover:text-white transition-colors"
