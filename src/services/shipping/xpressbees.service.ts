@@ -301,3 +301,65 @@ export const cancelShipmentXpressbees = async (awbNumber: string) => {
     throw new Error(data.message || "Shipment cancellation failed");
   }
 };
+
+/**
+ * Get Xpressbees NDR Exceptions List.
+ *
+ * Endpoint: https://ship.xpressbees.com/api/franchise/ndr
+ *
+ * Method: GET
+ *
+ * Authentication: Required
+ * @returns NDR list response
+ */
+export const getXpressbeesNDRList = async () => {
+  const token = await getXpressbeesToken();
+
+  const response: any = await fetch(`${XPRESSBEES_BASE_URL}/franchise/ndr`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(`Xpressbees Fetch NDR List Failed: ${response.statusText}`);
+  }
+
+  return data;
+};
+
+/**
+ * Create Xpressbees NDR Action (Re-attempt, Update Address, Update Phone).
+ *
+ * Endpoint: https://ship.xpressbees.com/api/franchise/ndr/create
+ *
+ * Method: POST
+ *
+ * Authentication: Required
+ * @param payload NDR action payload { awb, action, action_data }
+ * @returns Response data
+ */
+export const createXpressbeesNDR = async (payload: { awb: string; action: string; action_data: any }) => {
+  const token = await getXpressbeesToken();
+
+  const response: any = await fetch(`${XPRESSBEES_BASE_URL}/franchise/ndr/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(`Xpressbees Create NDR Action Failed: ${response.statusText}`);
+  }
+
+  return data;
+};
+
