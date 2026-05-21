@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Package, RotateCcw, Clock, Shield } from "lucide-react";
+import { SHIPPING_FEE_PER_ITEM } from "@/config/shipping";
 
 const sections = [
   {
@@ -9,7 +10,7 @@ const sections = [
     title: "Shipping Policy",
     items: [
       { label: "Free Shipping", detail: "No free shipping available." },
-      { label: "Standard Delivery", detail: "₹30 delivery fee per item." },
+      { label: "Standard Delivery", detail: `₹${SHIPPING_FEE_PER_ITEM} delivery fee per item.` },
       { label: "Processing Time", detail: "Orders are dispatched within 1–2 business days." },
       { label: "Delivery Time", detail: "5–7 business days across India." },
       { label: "Courier Partners", detail: "BlueDart, Delhivery, and India Post for remote areas." },
@@ -64,7 +65,7 @@ export default function ShippingReturns() {
         <section className="py-14 container mx-auto px-4 max-w-4xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
             {[
-              { icon: Package, label: "Standard Delivery", sub: "₹30 per item" },
+              { icon: Package, label: "Standard Delivery", sub: `₹${SHIPPING_FEE_PER_ITEM} per item` },
               { icon: Clock, label: "5–7 Day Delivery", sub: "Pan India" },
               { icon: Shield, label: "Final Sale", sub: "No Returns/Exchanges" },
             ].map(({ icon: Icon, label, sub }) => (

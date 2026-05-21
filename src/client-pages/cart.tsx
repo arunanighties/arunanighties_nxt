@@ -6,6 +6,7 @@ import { useCart, CartItem } from "@/context/cart";
 import { Navbar } from "@/components/layout/navbar";
 import { getApiBase } from "@/lib/api-config";
 import { resolveImageUrl } from "@/components/product-gallery";
+import { SHIPPING_FEE_PER_ITEM } from "@/config/shipping";
 
 function formatINR(n: number) { return `₹${n.toLocaleString("en-IN")}`; }
 
@@ -313,12 +314,12 @@ export default function CartPage() {
                     <span>{formatINR(totalPrice)}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Shipping (₹30/item)</span>
-                    <span>{formatINR(items.reduce((acc, i) => acc + (i.quantity * 30), 0))}</span>
+                    <span>Shipping (₹{SHIPPING_FEE_PER_ITEM}/item)</span>
+                    <span>{formatINR(items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))}</span>
                   </div>
                   <div className="border-t border-pink-100 pt-2.5 flex justify-between font-bold text-rose-900 text-base">
                     <span>Total</span>
-                    <span className="text-primary">{formatINR(totalPrice + items.reduce((acc, i) => acc + (i.quantity * 30), 0))}</span>
+                    <span className="text-primary">{formatINR(totalPrice + items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))}</span>
                   </div>
                 </div>
 

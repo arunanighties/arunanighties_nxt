@@ -5,6 +5,7 @@ import { MapPin, CreditCard, CheckCircle2, Loader2, ShoppingBag, Package, ArrowL
 import { Navbar } from "@/components/layout/navbar";
 import { useCart } from "@/context/cart";
 import { useToast } from "@/hooks/use-toast";
+import { SHIPPING_FEE_PER_ITEM } from "@/config/shipping";
 
 type Step = "address" | "payment" | "success";
 
@@ -100,7 +101,7 @@ export default function CheckoutPage() {
         imageUrl: i.imageUrl
       }));
 
-      const total = (totalPrice + (items.reduce((acc, i) => acc + (i.quantity * 30), 0)));
+      const total = (totalPrice + (items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0)));
 
 
       // Step 0: Check stock availability
@@ -166,7 +167,7 @@ export default function CheckoutPage() {
               price: i.price,
               imageUrl: i.imageUrl
             }));
-            const finalTotal = (totalPrice + (items.reduce((acc, i) => acc + (i.quantity * 30), 0))).toFixed(2);
+            const finalTotal = (totalPrice + (items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))).toFixed(2);
 
             const orderData = {
               userId: user?.id ?? null,
@@ -511,11 +512,11 @@ export default function CheckoutPage() {
                       <span>Subtotal</span><span>{formatINR(totalPrice)}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Shipping (₹30/item)</span><span>{formatINR(items.reduce((acc, i) => acc + (i.quantity * 30), 0))}</span>
+                      <span>Shipping (₹{SHIPPING_FEE_PER_ITEM}/item)</span><span>{formatINR(items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))}</span>
                     </div>
                     <div className="flex justify-between font-bold text-rose-900 text-base pt-1 border-t border-pink-100">
                       <span>Total</span>
-                      <span className="text-primary">{formatINR(totalPrice + items.reduce((acc, i) => acc + (i.quantity * 30), 0))}</span>
+                      <span className="text-primary">{formatINR(totalPrice + items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))}</span>
                     </div>
                   </div>
 
@@ -585,11 +586,11 @@ export default function CheckoutPage() {
                       <span>Subtotal</span><span>{formatINR(totalPrice)}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Shipping (₹30/item)</span><span>{formatINR(items.reduce((acc, i) => acc + (i.quantity * 30), 0))}</span>
+                      <span>Shipping (₹{SHIPPING_FEE_PER_ITEM}/item)</span><span>{formatINR(items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))}</span>
                     </div>
                     <div className="flex justify-between font-bold text-rose-900 text-base pt-1 border-t border-pink-100">
                       <span>Total</span>
-                      <span className="text-primary">{formatINR(totalPrice + items.reduce((acc, i) => acc + (i.quantity * 30), 0))}</span>
+                      <span className="text-primary">{formatINR(totalPrice + items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))}</span>
                     </div>
                   </div>
                 </div>
