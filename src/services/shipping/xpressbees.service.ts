@@ -23,11 +23,11 @@ const TOKEN_TTL_MS = 55 * 60 * 1000; // 55 minutes (Xpressbees tokens typically 
 
 /**
  * Get Xpressbees Token (User login).
- * 
+ *
  * Endpoint: https://ship.xpressbees.com/api/users/franchise_user_login
- * 
+ *
  * Method: POST
- * 
+ *
  * @returns Token string
  */
 export const getXpressbeesToken = async (): Promise<string> => {
@@ -66,13 +66,13 @@ export const getXpressbeesToken = async (): Promise<string> => {
 
 /**
  * Track Xpressbees Shipment.
- * 
+ *
  * Endpoint: https://ship.xpressbees.com/api/franchise/shipments/track_shipment
- * 
+ *
  * Method: POST
- * 
+ *
  * Authentication: Required
- * 
+ *
  * @param awbNumber AWB number
  * @returns Tracking data
  */
@@ -102,11 +102,11 @@ export const trackShipmentXpressbees = async (awbNumber: string) => {
 
 /**
  * Get Xpressbees Couriers.
- * 
+ *
  * Endpoint: https://ship.xpressbees.com/api/franchise/shipments/courier
- * 
+ *
  * Method: GET
- * 
+ *
  * Authentication: Required
  * @returns Couriers list
  */
@@ -131,13 +131,13 @@ export const getXpressbeesCouriers = async () => {
 
 /**
  * Generate Xpressbees Shipment
- * 
+ *
  * Endpoint: https://ship.xpressbees.com/api/franchise/shipments
- * 
+ *
  * Method: POST
- * 
+ *
  * Authentication: Required
- * 
+ *
  * @param order Order object
  * @param items Items array
  * @param packageDetails Package details
@@ -178,7 +178,7 @@ export const generateShipmentXpressbees = async (order: any, items: any[], packa
   }
 
   const payload = {
-    id: String(order.id),
+    id: `${order.id}_${Date.now()}`.substring(0, 20),
     payment_method: "prepaid", // Default to prepaid as requested
     consigner_name: CONSIGNER_DETAILS.name,
     consigner_phone: CONSIGNER_DETAILS.phone,
@@ -232,13 +232,13 @@ export const generateShipmentXpressbees = async (order: any, items: any[], packa
 
 /**
  * Request Pickup for Xpressbees Shipments
- * 
+ *
  * Endpoint: https://ship.xpressbees.com/api/franchise/shipments/pickup
- * 
+ *
  * Method: POST
- * 
+ *
  * Authentication: Required
- * 
+ *
  * @param awbNumbers AWB numbers
  * @returns Pickup request data
  */
@@ -269,13 +269,13 @@ export const requestPickupXpressbees = async (awbNumbers: string) => {
 
 /**
  * Cancel Xpressbees Shipment
- * 
+ *
  * Endpoint: https://ship.xpressbees.com/api/franchise/shipments/cancel_shipment
- * 
+ *
  * Method: POST
- * 
+ *
  * Authentication: Required
- * 
+ *
  * @param awbNumber AWB number
  * @returns Shipment data
  */
