@@ -153,7 +153,7 @@ export default function Home() {
           <div className="py-24 flex justify-center bg-background">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : hasSections ? (
+        ) : (
           <>
             {sections.map((section) => (
               section.products.length > 0 && (
@@ -176,60 +176,7 @@ export default function Home() {
                 </section>
               )
             ))}
-
-            {/* ── Unsectioned products under the default section ── */}
-            {unsectionedProducts.length > 0 && (
-              <section className="py-8 bg-background">
-                <div className="container mx-auto px-4 md:px-6">
-                  <div className="flex items-end justify-between mb-6">
-                    <div>
-                      <h2 className="font-serif text-3xl md:text-4xl font-bold text-foreground">{settings.featuredSectionTitle}</h2>
-                      <p className="text-muted-foreground mt-2">{settings.featuredSectionSubtitle}</p>
-                    </div>
-                    <Link href="/new-arrivals">
-                      <Button variant="link" className="hidden md:flex text-primary hover:text-primary/80">
-                        View all <ArrowRight className="ml-1 w-4 h-4" />
-                      </Button>
-                    </Link>
-                  </div>
-                  <div className="px-4 md:px-6">
-                    <ProductCarousel products={unsectionedProducts} />
-                  </div>
-                </div>
-              </section>
-            )}
           </>
-        ) : (
-          /* ── No sections yet: show all products in the default section ── */
-          <section className="py-10 bg-background">
-            <div className="container mx-auto px-4 md:px-6">
-              <div className="flex items-end justify-between mb-10">
-                <div>
-                  <h2 className="font-serif text-3xl md:text-4xl font-bold text-foreground">{settings.featuredSectionTitle}</h2>
-                  <p className="text-muted-foreground mt-2">{settings.featuredSectionSubtitle}</p>
-                </div>
-                <Link href="/new-arrivals">
-                  <Button variant="link" className="hidden md:flex text-primary hover:text-primary/80">
-                    View all <ArrowRight className="ml-1 w-4 h-4" />
-                  </Button>
-                </Link>
-              </div>
-              {isLoading ? (
-                <div className="w-full h-64 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-              ) : productsArray.length > 0 ? (
-                <div className="px-4 md:px-6">
-                  <ProductCarousel products={productsArray} />
-                </div>
-              ) : (
-                <div className="text-center py-20 bg-muted/30 rounded-2xl border border-border border-dashed">
-                  <h3 className="font-serif text-xl font-medium text-foreground mb-2">No nighties found</h3>
-                  <p className="text-muted-foreground">Check back soon for new arrivals.</p>
-                </div>
-              )}
-            </div>
-          </section>
         )}
 
         {/* ── Why choose us ─────────────────────────────── */}

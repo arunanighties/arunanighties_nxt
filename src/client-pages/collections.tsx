@@ -31,7 +31,7 @@ const BG_GRADIENTS = [
   "from-violet-50 to-purple-50",
 ];
 
-const SECTION_ICONS = ["🌸", "✨", "🪡", "💐", "🖨️", "🤗", "🌺", "💫"];
+const SECTION_ICONS = ["🌸", "✨", "🔥", "💐", "🖨️", "🤗", "🌺", "💫"];
 
 export default function Collections() {
   const [sections, setSections] = useState<HomepageSection[]>([]);

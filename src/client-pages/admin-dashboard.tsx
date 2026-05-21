@@ -2573,7 +2573,7 @@ export default function AdminDashboard() {
                 ) : (
                   <div className="divide-y divide-pink-50">
                     {sections.map((section, idx) => {
-                      const ICONS = ["🌸", "✨", "🪡", "💐", "🖨️", "🤗", "🌺", "💫"];
+                      const ICONS = ["🌸", "✨", "🔥", "💐", "🖨️", "🤗", "🌺", "💫"];
                       const productCount = section.products.length;
                       return (
                         <div key={section.id} className="flex items-center gap-4 px-6 py-4 hover:bg-pink-50/40">
