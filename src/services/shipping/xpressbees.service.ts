@@ -207,7 +207,7 @@ export const generateShipmentXpressbees = async (order: any, items: any[], packa
     breadth: String(packageDetails?.breadth || "12"),
     height: String(packageDetails?.height || "12"),
     courier_id: String(packageDetails?.courierId || "12992"),
-    pickup_location: "franchise",
+    pickup_location: "customer",
     order_amount: String(order.total),
     collectable_amount: 0, // for prepaid it is 0
   };
