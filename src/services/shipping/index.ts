@@ -3,10 +3,10 @@
  * Centralized entry point for shipping integrations.
  */
 
-import { trackShipmentMock, advanceMockStage, rewindMockStage } from "./mock.service";
+import { trackShipmentMock, advanceMockStage, rewindMockStage, getMockNDRList, createMockNDR } from "./mock.service";
 export { advanceMockStage, rewindMockStage };
 
-import { trackShipmentXpressbees, generateShipmentXpressbees, requestPickupXpressbees, getXpressbeesCouriers, cancelShipmentXpressbees } from "./xpressbees.service";
+import { trackShipmentXpressbees, generateShipmentXpressbees, requestPickupXpressbees, getXpressbeesCouriers, cancelShipmentXpressbees, getXpressbeesNDRList, createXpressbeesNDR } from "./xpressbees.service";
 import { logger } from "../../lib/serverLogger";
 
 const USE_MOCK_SHIPPING = process.env.USE_MOCK_SHIPPING === "true";
@@ -89,6 +89,30 @@ export const cancelShipment = async (awbNumber: string) => {
     };
   } else {
     return await cancelShipmentXpressbees(awbNumber);
+  }
+};
+
+/**
+ * Fetches the NDR (Non-Delivery Report) exceptions list.
+ */
+export const getNDRList = async () => {
+  if (USE_MOCK_SHIPPING) {
+    logger.debug("Fetching mock NDR list");
+    return await getMockNDRList();
+  } else {
+    return await getXpressbeesNDRList();
+  }
+};
+
+/**
+ * Creates/submits an NDR action (re-attempt, update phone, update address).
+ */
+export const createNDR = async (payload: { awb: string; action: string; action_data: any }) => {
+  if (USE_MOCK_SHIPPING) {
+    logger.info({ payload }, "Submitting mock NDR action");
+    return await createMockNDR(payload);
+  } else {
+    return await createXpressbeesNDR(payload);
   }
 };
 

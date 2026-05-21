@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import AdminSidebar, { type Tab as SidebarTab } from "../components/admin/admin-sidebar";
 import ReportsPage from "./admin/reports";
+import { NdrDashboard } from "../components/admin/orders/ndr-dashboard";
 
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -1524,10 +1525,12 @@ export default function AdminDashboard() {
     { id: "inventory", label: "Inventory", icon: Package },
     { id: "products", label: "Products", icon: Tag },
     { id: "orders", label: "Orders", icon: ShoppingCart },
+    { id: "ndr", label: "NDR Exceptions", icon: AlertTriangle },
     { id: "collections", label: "Collections", icon: Tag },
     { id: "sections", label: "Sections", icon: Layers },
     { id: "settings", label: "Settings", icon: Settings },
   ];
+
 
   const statCards = [
     { label: "Total Revenue", value: stats ? formatINR(stats.totalRevenue ?? 0) : "—", icon: IndianRupee, color: "text-rose-600", bg: "bg-rose-50" },
@@ -2780,6 +2783,12 @@ export default function AdminDashboard() {
               )}
             </div>
           )}
+
+          {/* ── NDR EXCEPTIONS ───────────────────── */}
+          {activeTab === "ndr" && (
+            <NdrDashboard />
+          )}
+
 
 
           {/* ── SETTINGS ─────────────────────────── */}

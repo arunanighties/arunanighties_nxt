@@ -116,3 +116,72 @@ export const trackShipmentMock = async (awbNumber: string) => {
     tracking_data
   };
 };
+
+// In-memory list of mock NDR exceptions
+let mockNDRs = [
+  {
+    awb_number: "8459632115",
+    event_date: new Date(Date.now() - 3600000 * 2).toISOString(),
+    courier_remarks: "Customer refused to accept - requested delivery on weekend",
+    total_attempts: 1
+  },
+  {
+    awb_number: "8459632116",
+    event_date: new Date(Date.now() - 3600000 * 24).toISOString(),
+    courier_remarks: "Address incomplete, contact number not reachable",
+    total_attempts: 2
+  },
+  {
+    awb_number: "8459632117",
+    event_date: new Date(Date.now() - 3600000 * 48).toISOString(),
+    courier_remarks: "Door locked / premises closed",
+    total_attempts: 1
+  }
+];
+
+export const getMockNDRList = async () => {
+  await new Promise((resolve) => setTimeout(resolve, 800));
+  if (mockNDRs.length === 0) {
+    // Re-initialize for testing convenience if list becomes empty
+    mockNDRs = [
+      {
+        awb_number: "8459632115",
+        event_date: new Date(Date.now() - 3600000 * 2).toISOString(),
+        courier_remarks: "Customer refused to accept - requested delivery on weekend",
+        total_attempts: 1
+      },
+      {
+        awb_number: "8459632116",
+        event_date: new Date(Date.now() - 3600000 * 24).toISOString(),
+        courier_remarks: "Address incomplete, contact number not reachable",
+        total_attempts: 2
+      },
+      {
+        awb_number: "8459632117",
+        event_date: new Date(Date.now() - 3600000 * 48).toISOString(),
+        courier_remarks: "Door locked / premises closed",
+        total_attempts: 1
+      }
+    ];
+  }
+  return mockNDRs;
+};
+
+export const createMockNDR = async (payload: { awb: string; action: string; action_data: any }) => {
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  const { awb, action, action_data } = payload;
+  
+  // Filter out the resolved NDR from list to simulate resolution
+  mockNDRs = mockNDRs.filter(ndr => ndr.awb_number !== awb);
+  
+  return {
+    success: true,
+    message: `NDR action '${action}' successfully submitted for AWB ${awb}`,
+    data: {
+      awb,
+      action,
+      action_data,
+      status: "submitted"
+    }
+  };
+};
