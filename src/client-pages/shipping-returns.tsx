@@ -8,24 +8,20 @@ const sections = [
     icon: Package,
     title: "Shipping Policy",
     items: [
-      { label: "Free Shipping", detail: "On all orders above ₹999." },
-      { label: "Standard Delivery", detail: "₹49 flat fee for orders below ₹999." },
+      { label: "Free Shipping", detail: "No free shipping available." },
+      { label: "Standard Delivery", detail: "₹30 delivery fee per item." },
       { label: "Processing Time", detail: "Orders are dispatched within 1–2 business days." },
       { label: "Delivery Time", detail: "5–7 business days across India." },
       { label: "Courier Partners", detail: "BlueDart, Delhivery, and India Post for remote areas." },
-      { label: "Tracking", detail: "A tracking link is sent to your WhatsApp/email once shipped." },
+      { label: "Tracking", detail: "Tracking will be available on the website itself." },
     ],
   },
   {
     icon: RotateCcw,
     title: "Return & Exchange Policy",
     items: [
-      { label: "Return Window", detail: "7 days from the date of delivery." },
-      { label: "Eligible Items", detail: "Unused, unwashed items in original packaging with tags intact." },
-      { label: "Non-returnable", detail: "Customised, altered, or used items cannot be returned." },
-      { label: "Exchange", detail: "Size exchanges are free for the first exchange." },
-      { label: "Refund", detail: "Refunds are processed within 5–7 business days after receiving the return." },
-      { label: "Return Shipping", detail: "Return pickup is free for defective items. For size issues, a ₹99 pickup fee applies." },
+      { label: "Policy", detail: "No return, No Exchange, NO COD." },
+      { label: "Assistance", detail: "For any assistance, you can contact the Admin through WhatsApp." },
     ],
   },
 ];
@@ -40,7 +36,7 @@ export default function ShippingReturns() {
       metaDesc.setAttribute('name', 'description');
       document.head.appendChild(metaDesc);
     }
-    metaDesc.setAttribute('content', "Read about our free shipping threshold above ₹999, pan-India courier partners, flat rates, and hassle-free 7-day return/size-exchange window.");
+    metaDesc.setAttribute('content', "Read about our pan-India courier partners, flat delivery rates per item, and strict no-return/no-exchange policy.");
 
     let metaKeywords = document.querySelector('meta[name="keywords"]');
     if (!metaKeywords) {
@@ -68,9 +64,9 @@ export default function ShippingReturns() {
         <section className="py-14 container mx-auto px-4 max-w-4xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
             {[
-              { icon: Package, label: "Free Shipping", sub: "Orders above ₹999" },
+              { icon: Package, label: "Standard Delivery", sub: "₹30 per item" },
               { icon: Clock, label: "5–7 Day Delivery", sub: "Pan India" },
-              { icon: Shield, label: "7-Day Returns", sub: "Hassle-free" },
+              { icon: Shield, label: "Final Sale", sub: "No Returns/Exchanges" },
             ].map(({ icon: Icon, label, sub }) => (
               <div key={label} className="bg-white border border-pink-100 rounded-2xl p-5 text-center shadow-sm">
                 <div className="inline-flex items-center justify-center w-10 h-10 bg-pink-50 rounded-full mb-3">
@@ -103,7 +99,7 @@ export default function ShippingReturns() {
           ))}
 
           <div className="bg-pink-50 border border-pink-100 rounded-2xl p-6 text-center mt-6">
-            <p className="text-rose-700 font-medium mb-1">Need help with a return or order?</p>
+            <p className="text-rose-700 font-medium mb-1">Need assistance with your order?</p>
             <p className="text-rose-600/70 text-sm">
               WhatsApp us at{" "}
               <a href="https://wa.me/918125210950" className="text-primary font-semibold underline">
