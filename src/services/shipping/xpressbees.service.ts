@@ -208,7 +208,7 @@ export const generateShipmentXpressbees = async (order: any, items: any[], packa
     height: String(packageDetails?.height || "12"),
     courier_id: String(packageDetails?.courierId || "12992"),
     pickup_location: "customer",
-    order_amount: String(order.total),
+    order_amount: Number(order.total),
     collectable_amount: 0, // for prepaid it is 0
   };
   console.log("Payload:", payload);
