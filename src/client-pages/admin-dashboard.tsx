@@ -2856,6 +2856,23 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
+                  {/* Shipping Settings */}
+                  <div className="bg-white rounded-2xl border border-pink-100 shadow-sm p-6">
+                    <h2 className="font-semibold text-rose-900 mb-4 flex items-center gap-2"><Truck className="w-4 h-4 text-primary" />Shipping & Delivery Settings</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <AdminLabel>Flat Shipping Fee per Order (₹)</AdminLabel>
+                        <AdminInput value={siteSettings.shippingFee ?? "99"} onChange={(v) => setSiteSettings(s => ({ ...s, shippingFee: v }))} placeholder="99" type="number" />
+                        <p className="text-xs text-muted-foreground mt-1">Fixed delivery fee charged per order below free shipping threshold.</p>
+                      </div>
+                      <div>
+                        <AdminLabel>Free Shipping Minimum Order Value (₹)</AdminLabel>
+                        <AdminInput value={siteSettings.freeShippingThreshold ?? "3999"} onChange={(v) => setSiteSettings(s => ({ ...s, freeShippingThreshold: v }))} placeholder="3999" type="number" />
+                        <p className="text-xs text-muted-foreground mt-1">Orders with subtotal equal to or above this amount get free shipping.</p>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Preview */}
                   <div className="bg-gradient-to-br from-pink-100 via-rose-50 to-pink-200 rounded-2xl border border-pink-200 p-6">
                     <p className="text-xs font-semibold text-rose-500 uppercase tracking-wider mb-4">Live Preview</p>

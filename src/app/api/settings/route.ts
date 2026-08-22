@@ -12,6 +12,8 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   featuredSectionLabel: "Handpicked for You",
   featuredSectionTitle: "Top Featured Nighties",
   featuredSectionSubtitle: "Traditional Indian cotton nightgowns — soft, stylish, and made to last.",
+  shippingFee: "99",
+  freeShippingThreshold: "3999",
 };
 
 export async function GET() {

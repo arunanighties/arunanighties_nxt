@@ -9,6 +9,7 @@ import { ReviewsSection } from "@/components/reviews-section";
 import { useUser } from "@/context/user";
 import { useCart } from "@/context/cart";
 import { useToast } from "@/hooks/use-toast";
+import { useSiteSettings } from "@/hooks/use-site-settings";
 import useEmblaCarousel from "embla-carousel-react";
 import {
   ArrowLeft,
@@ -217,6 +218,7 @@ export default function ProductDetail() {
   const { user, openLogin } = useUser();
   const { addItem, items } = useCart();
   const { toast } = useToast();
+  const { freeShippingThreshold } = useSiteSettings();
 
   const [product, setProduct] = useState<ProductFull | null>(null);
   const [loading, setLoading] = useState(true);
@@ -537,7 +539,7 @@ export default function ProductDetail() {
                     <span className="ml-2 text-xs bg-rose-100 text-rose-600 px-2 py-0.5 rounded-full font-bold">{discountPct}% OFF</span>
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground">Inclusive of all taxes · Free shipping above ₹499</p>
+                <p className="text-xs text-muted-foreground">Inclusive of all taxes · Free shipping above ₹{freeShippingThreshold.toLocaleString("en-IN")}</p>
               </div>
 
               {/* Description */}

@@ -5,7 +5,7 @@ import { MapPin, CreditCard, CheckCircle2, Loader2, ShoppingBag, Package, ArrowL
 import { Navbar } from "@/components/layout/navbar";
 import { useCart } from "@/context/cart";
 import { useToast } from "@/hooks/use-toast";
-import { SHIPPING_FEE_PER_ITEM } from "@/config/shipping";
+import { useSiteSettings } from "@/hooks/use-site-settings";
 
 type Step = "address" | "payment" | "success";
 
@@ -23,6 +23,11 @@ export default function CheckoutPage() {
   const [, setLocation] = useLocation();
   const { items, totalPrice, clearCart, removeItem } = useCart();
   const { toast } = useToast();
+  const { shippingFee, calculateShippingFee } = useSiteSettings();
+
+  const shippingCost = calculateShippingFee(totalPrice);
+  const isFreeShipping = shippingCost === 0;
+  const grandTotal = totalPrice + shippingCost;
 
   const [step, setStep] = useState<Step>("address");
   const [checkoutStep, setCheckoutStep] = useState<'address' | 'payment'>('address');
@@ -101,7 +106,7 @@ export default function CheckoutPage() {
         imageUrl: i.imageUrl
       }));
 
-      const total = (totalPrice + (items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0)));
+      const total = grandTotal;
 
 
       // Step 0: Check stock availability
@@ -167,7 +172,7 @@ export default function CheckoutPage() {
               price: i.price,
               imageUrl: i.imageUrl
             }));
-            const finalTotal = (totalPrice + (items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))).toFixed(2);
+            const finalTotal = grandTotal.toFixed(2);
 
             const orderData = {
               userId: user?.id ?? null,
@@ -511,12 +516,17 @@ export default function CheckoutPage() {
                     <div className="flex justify-between text-muted-foreground">
                       <span>Subtotal</span><span>{formatINR(totalPrice)}</span>
                     </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Shipping (₹{SHIPPING_FEE_PER_ITEM}/item)</span><span>{formatINR(items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))}</span>
+                    <div className="flex justify-between items-center text-muted-foreground">
+                      <span>Shipping {isFreeShipping ? "" : "(Flat fee per order)"}</span>
+                      {isFreeShipping ? (
+                        <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs border border-emerald-100">FREE</span>
+                      ) : (
+                        <span>{formatINR(shippingCost)}</span>
+                      )}
                     </div>
                     <div className="flex justify-between font-bold text-rose-900 text-base pt-1 border-t border-pink-100">
                       <span>Total</span>
-                      <span className="text-primary">{formatINR(totalPrice + items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))}</span>
+                      <span className="text-primary">{formatINR(grandTotal)}</span>
                     </div>
                   </div>
 
@@ -585,12 +595,17 @@ export default function CheckoutPage() {
                     <div className="flex justify-between text-muted-foreground">
                       <span>Subtotal</span><span>{formatINR(totalPrice)}</span>
                     </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Shipping (₹{SHIPPING_FEE_PER_ITEM}/item)</span><span>{formatINR(items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))}</span>
+                    <div className="flex justify-between items-center text-muted-foreground">
+                      <span>Shipping {isFreeShipping ? "" : "(Flat fee per order)"}</span>
+                      {isFreeShipping ? (
+                        <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs border border-emerald-100">FREE</span>
+                      ) : (
+                        <span>{formatINR(shippingCost)}</span>
+                      )}
                     </div>
                     <div className="flex justify-between font-bold text-rose-900 text-base pt-1 border-t border-pink-100">
                       <span>Total</span>
-                      <span className="text-primary">{formatINR(totalPrice + items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))}</span>
+                      <span className="text-primary">{formatINR(grandTotal)}</span>
                     </div>
                   </div>
                 </div>

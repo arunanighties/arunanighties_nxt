@@ -2,32 +2,11 @@ import { useEffect } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Package, RotateCcw, Clock, Shield } from "lucide-react";
-import { SHIPPING_FEE_PER_ITEM } from "@/config/shipping";
-
-const sections = [
-  {
-    icon: Package,
-    title: "Shipping Policy",
-    items: [
-      { label: "Free Shipping", detail: "No free shipping available." },
-      { label: "Standard Delivery", detail: `₹${SHIPPING_FEE_PER_ITEM} delivery fee per item.` },
-      { label: "Processing Time", detail: "Orders are dispatched within 1–2 business days." },
-      { label: "Delivery Time", detail: "5–7 business days across India." },
-      { label: "Courier Partners", detail: "BlueDart, Delhivery, and India Post for remote areas." },
-      { label: "Tracking", detail: "Tracking will be available on the website itself." },
-    ],
-  },
-  {
-    icon: RotateCcw,
-    title: "Return & Exchange Policy",
-    items: [
-      { label: "Policy", detail: "No return, No Exchange, NO COD." },
-      { label: "Assistance", detail: "For any assistance, you can contact the Admin through WhatsApp." },
-    ],
-  },
-];
+import { useSiteSettings } from "@/hooks/use-site-settings";
 
 export default function ShippingReturns() {
+  const { shippingFee, freeShippingThreshold } = useSiteSettings();
+
   useEffect(() => {
     document.title = "Shipping & Easy Return Policies | Aruna Nighties";
     
@@ -37,7 +16,7 @@ export default function ShippingReturns() {
       metaDesc.setAttribute('name', 'description');
       document.head.appendChild(metaDesc);
     }
-    metaDesc.setAttribute('content', "Read about our pan-India courier partners, flat delivery rates per item, and strict no-return/no-exchange policy.");
+    metaDesc.setAttribute('content', "Read about our pan-India courier partners, flat delivery rates per order, and strict no-return/no-exchange policy.");
 
     let metaKeywords = document.querySelector('meta[name="keywords"]');
     if (!metaKeywords) {
@@ -47,6 +26,30 @@ export default function ShippingReturns() {
     }
     metaKeywords.setAttribute('content', "aruna nighties returns, shipping cost india, cash on delivery nighties, standard delivery speed, easy size exchange");
   }, []);
+
+  const sections = [
+    {
+      icon: Package,
+      title: "Shipping Policy",
+      items: [
+        { label: "Free Shipping", detail: `Free shipping on all orders above ₹${freeShippingThreshold.toLocaleString("en-IN")}.` },
+        { label: "Standard Delivery", detail: `Flat ₹${shippingFee} delivery fee per order below ₹${freeShippingThreshold.toLocaleString("en-IN")}.` },
+        { label: "Processing Time", detail: "Orders are dispatched within 1–2 business days." },
+        { label: "Delivery Time", detail: "5–7 business days across India." },
+        { label: "Courier Partners", detail: "BlueDart, Delhivery, and India Post for remote areas." },
+        { label: "Tracking", detail: "Tracking will be available on the website itself." },
+      ],
+    },
+    {
+      icon: RotateCcw,
+      title: "Return & Exchange Policy",
+      items: [
+        { label: "Policy", detail: "No return, No Exchange, NO COD." },
+        { label: "Assistance", detail: "For any assistance, you can contact the Admin through WhatsApp." },
+      ],
+    },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
@@ -65,7 +68,7 @@ export default function ShippingReturns() {
         <section className="py-14 container mx-auto px-4 max-w-4xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
             {[
-              { icon: Package, label: "Standard Delivery", sub: `₹${SHIPPING_FEE_PER_ITEM} per item` },
+              { icon: Package, label: "Standard Delivery", sub: `Flat ₹${shippingFee} per order` },
               { icon: Clock, label: "5–7 Day Delivery", sub: "Pan India" },
               { icon: Shield, label: "Final Sale", sub: "No Returns/Exchanges" },
             ].map(({ icon: Icon, label, sub }) => (

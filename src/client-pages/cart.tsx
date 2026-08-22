@@ -5,8 +5,7 @@ import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, Package, X, ChevronDown }
 import { useCart, CartItem } from "@/context/cart";
 import { Navbar } from "@/components/layout/navbar";
 import { getApiBase } from "@/lib/api-config";
-import { resolveImageUrl } from "@/components/product-gallery";
-import { SHIPPING_FEE_PER_ITEM } from "@/config/shipping";
+import { useSiteSettings } from "@/hooks/use-site-settings";
 
 function formatINR(n: number) { return `₹${n.toLocaleString("en-IN")}`; }
 
@@ -266,8 +265,14 @@ function CartItemRow({ item }: { item: CartItem }) {
 }
 
 export default function CartPage() {
-  const { items, totalItems, totalPrice, updateQty } = useCart();
+  const { items, totalItems, totalPrice } = useCart();
   const [, setLocation] = useLocation();
+  const { shippingFee, freeShippingThreshold, calculateShippingFee } = useSiteSettings();
+
+  const shippingCost = calculateShippingFee(totalPrice);
+  const isFreeShipping = shippingCost === 0;
+  const amountForFreeShipping = Math.max(0, freeShippingThreshold - totalPrice);
+  const grandTotal = totalPrice + shippingCost;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50/40 to-rose-50/30">
@@ -308,18 +313,40 @@ export default function CartPage() {
             <div className="lg:col-span-1">
               <div className="bg-white rounded-2xl border border-pink-100 shadow-sm p-6 sticky top-24">
                 <h2 className="font-semibold text-rose-900 text-base mb-4">Order Summary</h2>
+
+                {/* Free Shipping Progress Banner */}
+                {amountForFreeShipping > 0 ? (
+                  <div className="mb-4 p-3 bg-pink-50/80 border border-pink-100 rounded-xl text-xs text-rose-700 font-medium">
+                    <span>🚚 Add <strong>{formatINR(amountForFreeShipping)}</strong> more to get <strong>FREE Shipping</strong>!</span>
+                    <div className="w-full bg-pink-200/60 rounded-full h-1.5 mt-2 overflow-hidden">
+                      <div
+                        className="bg-primary h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, Math.round((totalPrice / freeShippingThreshold) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-4 p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-xs text-emerald-700 font-bold flex items-center gap-1.5">
+                    <span>🎉 You unlocked <strong>FREE Shipping</strong>!</span>
+                  </div>
+                )}
+
                 <div className="space-y-2.5 text-sm">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal ({totalItems} items)</span>
                     <span>{formatINR(totalPrice)}</span>
                   </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Shipping (₹{SHIPPING_FEE_PER_ITEM}/item)</span>
-                    <span>{formatINR(items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))}</span>
+                  <div className="flex justify-between items-center text-muted-foreground">
+                    <span>Shipping {isFreeShipping ? "" : `(Flat fee per order)`}</span>
+                    {isFreeShipping ? (
+                      <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs border border-emerald-100">FREE</span>
+                    ) : (
+                      <span>{formatINR(shippingCost)}</span>
+                    )}
                   </div>
                   <div className="border-t border-pink-100 pt-2.5 flex justify-between font-bold text-rose-900 text-base">
                     <span>Total</span>
-                    <span className="text-primary">{formatINR(totalPrice + items.reduce((acc, i) => acc + (i.quantity * SHIPPING_FEE_PER_ITEM), 0))}</span>
+                    <span className="text-primary">{formatINR(grandTotal)}</span>
                   </div>
                 </div>
 
@@ -338,7 +365,11 @@ export default function CartPage() {
 
                 {/* Trust badges */}
                 <div className="mt-5 pt-4 border-t border-pink-50 space-y-1.5">
-                  {["Standard shipping across India", "Easy 7-day returns", "100% genuine products"].map((t) => (
+                  {[
+                    isFreeShipping ? "FREE shipping unlocked" : `Free shipping on orders above ${formatINR(freeShippingThreshold)}`,
+                    "Standard delivery across India",
+                    "Easy 7-day returns",
+                  ].map((t) => (
                     <div key={t} className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
                       {t}
