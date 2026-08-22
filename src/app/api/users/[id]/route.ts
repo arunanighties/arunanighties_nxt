@@ -44,6 +44,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (typeof body?.addresses === "string") {
       updates.addresses = body.addresses;
     }
+    if (body?.cart !== undefined) {
+      updates.cart = typeof body.cart === "string" ? body.cart : JSON.stringify(body.cart);
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });

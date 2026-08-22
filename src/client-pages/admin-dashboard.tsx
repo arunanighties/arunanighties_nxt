@@ -10,7 +10,7 @@ import {
   Loader2, Plus, LogOut, Package, ShoppingCart, IndianRupee, CreditCard,
   AlertTriangle, Trash2, Users, Eye, LayoutDashboard, Tag,
   Settings, Pencil, Check, X, XCircle, Menu, Layers, Star, MessageSquare, GripVertical,
-  ChevronDown, ChevronUp, Search, Clock, FileText, MapPin, Phone, Truck,
+  ChevronDown, ChevronUp, ChevronRight, Search, Clock, FileText, MapPin, Phone, Truck,
   Info, Download, BarChart3
 } from "lucide-react";
 import AdminSidebar, { type Tab as SidebarTab } from "../components/admin/admin-sidebar";
@@ -995,6 +995,16 @@ export default function AdminDashboard() {
   // Shipping Dimensions Modal State
   const [shippingDimensionsOrder, setShippingDimensionsOrder] = useState<Order | null>(null);
 
+  // Customers State
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
+  const [customersCurrentPage, setCustomersCurrentPage] = useState(1);
+  const [totalCustomerPages, setTotalCustomerPages] = useState(1);
+  const [totalCustomersCount, setTotalCustomersCount] = useState(0);
+  const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
+  const [customerDetailTab, setCustomerDetailTab] = useState<"orders" | "cart">("orders");
+
   // Categories
   const [categories, setCategories] = useState<Category[]>([]);
   const [catLoading, setCatLoading] = useState(false);
@@ -1190,6 +1200,24 @@ export default function AdminDashboard() {
     } finally { setSectionsLoading(false); }
   };
 
+  const loadCustomers = async (page = 1, search = "") => {
+    setCustomersLoading(true);
+    try {
+      const res = await fetchWithAuth(`/admin/customers?page=${page}&limit=10&search=${encodeURIComponent(search)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCustomers(data.customers || []);
+        setTotalCustomersCount(data.total || 0);
+        setTotalCustomerPages(data.totalPages || 1);
+        setCustomersCurrentPage(data.page || 1);
+      }
+    } catch (err) {
+      console.error("Failed to load customers:", err);
+    } finally {
+      setCustomersLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!authLoading && (authError || (auth && !auth.authenticated))) {
       console.log("Admin session invalid, redirecting to login...");
@@ -1203,6 +1231,12 @@ export default function AdminDashboard() {
       loadOrders(); loadStats(); loadCategories(); loadSettings(); loadSections();
     }
   }, [auth?.authenticated]);
+
+  useEffect(() => {
+    if (auth?.authenticated && activeTab === "customers") {
+      loadCustomers(customersCurrentPage, customerSearchQuery);
+    }
+  }, [auth?.authenticated, activeTab, customersCurrentPage, customerSearchQuery]);
 
   // Keep stock in sync with size quantities for Add form
   useEffect(() => {
@@ -2787,6 +2821,300 @@ export default function AdminDashboard() {
           {/* ── NDR EXCEPTIONS ───────────────────── */}
           {activeTab === "ndr" && (
             <NdrDashboard />
+          )}
+
+          {/* ── CUSTOMERS ─────────────────────────── */}
+          {activeTab === "customers" && (
+            <div className="space-y-8 animate-in fade-in duration-300">
+              {selectedCustomer === null ? (
+                <>
+                  {/* Header & Search */}
+                  <div className="text-center space-y-3 max-w-xl mx-auto pt-2">
+                    <h1 className="font-serif text-3xl sm:text-4xl font-bold text-rose-900 leading-tight">Customer Management</h1>
+                    <p className="text-rose-500 text-sm">View and manage your registered boutique clientele.</p>
+                    
+                    <div className="relative pt-2">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-rose-300" />
+                      <input
+                        type="text"
+                        placeholder="Search by name or phone..."
+                        value={customerSearchQuery}
+                        onChange={(e) => {
+                          setCustomerSearchQuery(e.target.value);
+                          setCustomersCurrentPage(1);
+                        }}
+                        className="w-full pl-11 pr-4 py-3 bg-white border border-pink-100 rounded-full text-sm text-rose-900 placeholder:text-rose-300 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Customer Table Card */}
+                  <div className="bg-white rounded-3xl border border-pink-100 shadow-sm overflow-hidden mt-6">
+                    {customersLoading ? (
+                      <div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+                    ) : customers.length === 0 ? (
+                      <div className="p-16 text-center">
+                        <Users className="w-12 h-12 mx-auto text-rose-200 mb-3" />
+                        <p className="font-bold text-rose-900 text-lg">No registered customers found</p>
+                        <p className="text-sm text-rose-400 mt-1">Customers who register or place orders on your site will appear here.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-[#f4f7f4] border-b border-pink-50 text-[10px] font-bold text-[#607b71] uppercase tracking-wider">
+                              <th className="py-4 px-6">Customer Details</th>
+                              <th className="py-4 px-6">Phone Number</th>
+                              <th className="py-4 px-6">Role</th>
+                              <th className="py-4 px-6">Joined On</th>
+                              <th className="py-4 px-6 text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-pink-50/60">
+                            {customers.map((c) => {
+                              const initialLetter = (c.name || "G").charAt(0).toUpperCase();
+                              const formattedDate = c.createdAt 
+                                ? new Date(c.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+                                : "—";
+                              const displayId = `ID: #${String(c.id).padStart(4, "0")}`;
+
+                              return (
+                                <tr key={c.id} className="hover:bg-pink-50/30 transition-colors group">
+                                  {/* Details */}
+                                  <td className="py-4 px-6">
+                                    <div className="flex items-center gap-3.5">
+                                      <div className="w-10 h-10 rounded-full bg-[#f5efe6] text-[#8b6b47] flex items-center justify-center font-bold text-sm shrink-0 border border-amber-100/50">
+                                        {initialLetter}
+                                      </div>
+                                      <div>
+                                        <p className="font-bold text-rose-900 text-sm group-hover:text-primary transition-colors">
+                                          {c.name}
+                                        </p>
+                                        <p className="text-[10px] font-semibold text-rose-300">
+                                          {displayId}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </td>
+
+                                  {/* Phone */}
+                                  <td className="py-4 px-6">
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-rose-700">
+                                      <Phone className="w-3.5 h-3.5 text-rose-400" />
+                                      <span>{c.phone}</span>
+                                    </div>
+                                  </td>
+
+                                  {/* Role */}
+                                  <td className="py-4 px-6">
+                                    <span className="text-[9px] font-extrabold px-2.5 py-1 rounded bg-[#eaf3ed] text-[#426a57] uppercase tracking-wider">
+                                      {c.role || "USER"}
+                                    </span>
+                                  </td>
+
+                                  {/* Joined On */}
+                                  <td className="py-4 px-6 text-xs font-semibold text-rose-600">
+                                    {formattedDate}
+                                  </td>
+
+                                  {/* Actions */}
+                                  <td className="py-4 px-6 text-right">
+                                    <button
+                                      onClick={() => {
+                                        setSelectedCustomer(c);
+                                        setCustomerDetailTab("orders");
+                                      }}
+                                      className="w-8 h-8 rounded-full bg-pink-50 hover:bg-primary hover:text-white text-rose-400 flex items-center justify-center transition-all inline-flex shadow-sm hover:scale-105"
+                                      title="View Customer Details"
+                                    >
+                                      <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Pagination */}
+                    {totalCustomerPages > 1 && (
+                      <div className="flex flex-col sm:flex-row items-center justify-between border-t border-pink-100 p-4 px-6 gap-4 bg-white">
+                        <p className="text-xs text-rose-500 font-medium">
+                          Showing {(customersCurrentPage - 1) * 10 + 1} to {Math.min(customersCurrentPage * 10, totalCustomersCount)} of {totalCustomersCount} customers
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setCustomersCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={customersCurrentPage === 1}
+                            className="px-3 py-1.5 rounded-lg border border-pink-200 text-xs font-semibold text-rose-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-pink-50 transition-colors"
+                          >
+                            Previous
+                          </button>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: totalCustomerPages }, (_, i) => i + 1)
+                              .filter(p => p === 1 || p === totalCustomerPages || Math.abs(p - customersCurrentPage) <= 1)
+                              .map((p, i, arr) => (
+                                <Fragment key={`cust-page-${p}`}>
+                                  {i > 0 && arr[i - 1] !== p - 1 && <span className="text-rose-300 px-1">...</span>}
+                                  <button
+                                    onClick={() => setCustomersCurrentPage(p)}
+                                    className={`min-w-7 h-7 px-1.5 rounded-lg text-xs font-bold transition-colors ${
+                                      customersCurrentPage === p 
+                                        ? "bg-primary text-white shadow-sm" 
+                                        : "text-rose-600 hover:bg-pink-50 border border-transparent hover:border-pink-200"
+                                    }`}
+                                  >
+                                    {p}
+                                  </button>
+                                </Fragment>
+                              ))}
+                          </div>
+                          <button
+                            onClick={() => setCustomersCurrentPage(p => Math.min(totalCustomerPages, p + 1))}
+                            disabled={customersCurrentPage === totalCustomerPages}
+                            className="px-3 py-1.5 rounded-lg border border-pink-200 text-xs font-semibold text-rose-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-pink-50 transition-colors"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                /* Customer Detail View */
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  {/* Back button */}
+                  <button
+                    onClick={() => setSelectedCustomer(null)}
+                    className="inline-flex items-center gap-2 text-xs font-bold text-rose-500 hover:text-primary uppercase tracking-wider transition-colors"
+                  >
+                    ← BACK TO CLIENT LIST
+                  </button>
+
+                  {/* Customer Header Card */}
+                  <div className="bg-white rounded-3xl border border-pink-100 shadow-sm p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                    <div className="flex items-center gap-5">
+                      <div className="w-16 h-16 rounded-full bg-[#f5efe6] text-[#8b6b47] flex items-center justify-center font-bold text-2xl shrink-0 border-2 border-pink-100 shadow-sm">
+                        {(selectedCustomer.name || "G").charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h2 className="font-serif text-2xl sm:text-3xl font-bold text-rose-900 leading-tight">
+                          {selectedCustomer.name}
+                        </h2>
+                        <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-rose-500 mt-1.5">
+                          <span className="flex items-center gap-1.5">
+                            <Phone className="w-3.5 h-3.5 text-rose-400" /> {selectedCustomer.phone}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-rose-400" /> Joined {selectedCustomer.createdAt ? new Date(selectedCustomer.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs font-extrabold px-3 py-1 rounded bg-[#eaf3ed] text-[#426a57] uppercase tracking-wider">
+                      {selectedCustomer.role || "USER"}
+                    </span>
+                  </div>
+
+                  {/* Sub Tabs */}
+                  <div className="bg-white rounded-3xl border border-pink-100 shadow-sm p-6 space-y-6">
+                    <div className="flex items-center gap-8 border-b border-pink-50 pb-4">
+                      <button
+                        onClick={() => setCustomerDetailTab("orders")}
+                        className={`text-xs font-bold uppercase tracking-wider pb-2 border-b-2 transition-all flex items-center gap-2 ${
+                          customerDetailTab === "orders"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-rose-400 hover:text-rose-600"
+                        }`}
+                      >
+                        <Package className="w-4 h-4" /> ORDERS ({selectedCustomer.ordersCount || 0})
+                      </button>
+
+                      <button
+                        onClick={() => setCustomerDetailTab("cart")}
+                        className={`text-xs font-bold uppercase tracking-wider pb-2 border-b-2 transition-all flex items-center gap-2 ${
+                          customerDetailTab === "cart"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-rose-400 hover:text-rose-600"
+                        }`}
+                      >
+                        <ShoppingCart className="w-4 h-4" /> CART LIST ({selectedCustomer.cartItems?.length || 0})
+                      </button>
+                    </div>
+
+                    {/* Tab Content: Orders */}
+                    {customerDetailTab === "orders" && (
+                      <div className="space-y-4">
+                        {!selectedCustomer.orders || selectedCustomer.orders.length === 0 ? (
+                          <div className="py-12 text-center">
+                            <Package className="w-10 h-10 mx-auto text-rose-200 mb-2" />
+                            <p className="font-bold text-rose-800 text-sm">No order history for this customer</p>
+                          </div>
+                        ) : (
+                          selectedCustomer.orders.map((o: any) => (
+                            <AdminOrderCard
+                              key={o.id}
+                              order={o}
+                              expandedOrderId={expandedOrderId}
+                              setExpandedOrderId={setExpandedOrderId}
+                              setOrders={setOrders}
+                              setTrackingModalOrder={setTrackingModalOrder}
+                              setCancellingOrder={setCancellingOrder}
+                              setCancelConfirmId={setCancelConfirmId}
+                              setShippingDimensionsOrder={setShippingDimensionsOrder}
+                              setCancelReason={setCancelReason}
+                              toast={toast}
+                            />
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    {/* Tab Content: Cart List */}
+                    {customerDetailTab === "cart" && (
+                      <div>
+                        {!selectedCustomer.cartItems || selectedCustomer.cartItems.length === 0 ? (
+                          <div className="py-12 text-center">
+                            <ShoppingCart className="w-10 h-10 mx-auto text-rose-200 mb-2" />
+                            <p className="font-bold text-rose-800 text-sm">No items in cart for this customer</p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {selectedCustomer.cartItems.map((item: any, idx: number) => (
+                              <div key={idx} className="bg-pink-50/20 border border-pink-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
+                                {item.imageUrl && (
+                                  <img
+                                    src={resolveImageUrl(item.imageUrl)}
+                                    alt={item.name || "Product"}
+                                    className="w-20 h-24 object-cover rounded-xl border border-pink-100"
+                                  />
+                                )}
+                                <div className="space-y-1 min-w-0 flex-1">
+                                  <h4 className="font-bold text-rose-900 text-sm truncate">{item.name}</h4>
+                                  <p className="text-[11px] font-semibold text-rose-400">
+                                    BASE: <span className="text-rose-700">{item.selectedSize || "Standard"}</span> • QTY: <span className="text-rose-700">{item.quantity || 1}</span>
+                                  </p>
+                                  <div className="bg-white rounded-lg p-2 border border-pink-100 text-[10px] space-y-0.5">
+                                    <p className="font-bold text-rose-500 uppercase tracking-widest">BESPOKE MEASUREMENTS</p>
+                                    <p className="text-rose-800">Type: <span className="font-bold text-emerald-700">{item.selectedColor || "Standard"}</span></p>
+                                  </div>
+                                  <p className="text-sm font-bold text-rose-900 pt-1 font-serif">
+                                    ₹{parseFloat(item.price || 0).toLocaleString("en-IN")}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
 

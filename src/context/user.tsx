@@ -2,6 +2,8 @@ import { createContext, useContext, useState, ReactNode } from "react";
 import { LoginModal, LoginSuccessToast } from "@/components/login-modal";
 import { useToast } from "@/hooks/use-toast";
 
+import { getApiBase } from "@/lib/api-config";
+
 export interface UserType { id: number; phone: string; name?: string | null }
 
 interface UserContextType {
@@ -43,6 +45,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
       description: <LoginSuccessToast user={u} isNew={isNew} />,
       duration: 3500,
     });
+    try {
+      const storedCart = localStorage.getItem("aruna_cart");
+      if (storedCart && u && u.id) {
+        const cartItems = JSON.parse(storedCart);
+        fetch(`${getApiBase()}/api/users/${u.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cart: cartItems }),
+        }).catch(err => console.error("Login cart sync error:", err));
+      }
+    } catch {}
   };
 
   return (

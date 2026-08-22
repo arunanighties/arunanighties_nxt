@@ -12,6 +12,7 @@ export const usersTable = sqliteTable("users", {
   name: text("name"),
   email: text("email").unique(),
   addresses: text("addresses"),
+  cart: text("cart"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 

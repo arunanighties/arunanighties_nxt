@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { getApiBase } from "@/lib/api-config";
 
 export interface CartItem {
   id: number;
@@ -41,6 +42,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(items));
+
+    // Sync active cart to database if logged-in user exists
+    try {
+      const storedUser = localStorage.getItem("aruna_user");
+      if (storedUser) {
+        const u = JSON.parse(storedUser);
+        if (u && u.id) {
+          fetch(`${getApiBase()}/api/users/${u.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cart: items }),
+          }).catch(err => console.error("Cart sync error:", err));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to sync cart:", err);
+    }
   }, [items]);
 
   const totalItems = items.reduce((s, i) => s + i.quantity, 0);
