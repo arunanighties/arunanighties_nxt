@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AlertTriangle, Loader2, Calendar, Phone, MapPin } from "lucide-react";
+import { AlertTriangle, Loader2, Calendar, Phone, MapPin, MessageSquare } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { getApiBase } from "@/lib/api-config";
 
 interface NdrActionModalProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export function NdrActionModal({
   const [preferredDate, setPreferredDate] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newAddress, setNewAddress] = useState("");
+  const [remarks, setRemarks] = useState("");
 
   // Clear inputs when modal state changes
   useEffect(() => {
@@ -42,6 +44,7 @@ export function NdrActionModal({
       setPreferredDate("");
       setNewPhone("");
       setNewAddress("");
+      setRemarks("");
       setActionType("re-attempt");
     }
   }, [isOpen]);
@@ -86,15 +89,18 @@ export function NdrActionModal({
 
     setLoading(true);
     try {
-      const response = await fetch("/api/shipping/ndr", {
+      const response = await fetch(`${getApiBase()}/api/shipping/ndr`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
         },
         body: JSON.stringify({
           awb: awbNumber,
           action: actionType,
           action_data: actionData,
+          re_attempt_date: actionType === "re-attempt" ? preferredDate : undefined,
+          remarks: remarks.trim() || undefined,
         }),
       });
 
@@ -208,6 +214,21 @@ export function NdrActionModal({
               />
             </div>
           )}
+
+          {/* Admin Remarks */}
+          <div className="space-y-2 animate-in fade-in duration-200">
+            <label className="block text-[10px] font-bold text-rose-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+              <MessageSquare className="w-3.5 h-3.5" /> Admin Remarks (Optional)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Customer confirmed availability tomorrow"
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              disabled={loading}
+              className="w-full bg-white border border-pink-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 text-rose-900 transition-all shadow-sm placeholder:text-rose-200"
+            />
+          </div>
 
           <DialogFooter className="gap-2 sm:gap-0 pt-4">
             <button

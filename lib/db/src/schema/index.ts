@@ -5,3 +5,4 @@ export * from "./categories";
 export * from "./settings";
 export * from "./homepage-sections";
 export * from "./reviews";
+export * from "./ndr";

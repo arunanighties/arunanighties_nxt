@@ -3,16 +3,20 @@
 import { useState, useMemo, useEffect, Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
-  AlertTriangle, Loader2, RefreshCw, CheckCircle2, ShieldAlert
+  AlertTriangle, Loader2, RefreshCw, CheckCircle2, ShieldAlert, History
 } from "lucide-react";
 import { getApiBase } from "@/lib/api-config";
 import { NdrActionModal } from "./ndr-action-modal";
+import { NdrHistoryModal } from "./ndr-history-modal";
 
 interface NDRItem {
   awb_number: string;
   event_date: string;
   courier_remarks: string;
   total_attempts: number;
+  db_case_id?: number | null;
+  db_status?: string;
+  history_count?: number;
 }
 
 interface OrderItem {
@@ -30,11 +34,13 @@ function normalizeAwb(value: unknown): string {
 export function NdrDashboard() {
   const [selectedAwb, setSelectedAwb] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [historyAwb, setHistoryAwb] = useState<string | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [ndrFilter, setNdrFilter] = useState<NdrFilter>("mine");
+  const [ndrFilter, setNdrFilter] = useState<NdrFilter>("all");
   const ITEMS_PER_PAGE = 20;
 
-  // Fetch NDR exceptions from Xpressbees API
+  // Fetch NDR exceptions from Xpressbees API & sync with DB
   const { data: ndrList = [], isLoading, error, refetch, isFetching } = useQuery<NDRItem[]>({
     queryKey: ["admin-ndr-exceptions"],
     queryFn: async () => {
@@ -100,6 +106,11 @@ export function NdrDashboard() {
     setIsModalOpen(true);
   };
 
+  const handleViewHistory = (awb: string) => {
+    setHistoryAwb(awb);
+    setIsHistoryOpen(true);
+  };
+
   const handleActionSuccess = () => {
     refetch();
   };
@@ -123,8 +134,8 @@ export function NdrDashboard() {
               onChange={(e) => setNdrFilter(e.target.value as NdrFilter)}
               className="px-4 py-2.5 bg-white border border-pink-200 rounded-xl text-xs font-bold text-rose-900 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-sm hover:border-pink-300 transition-colors"
             >
-              <option value="all">All NDRs</option>
               <option value="mine">My NDRs</option>
+              <option value="all">All NDRs</option>
             </select>
           </div>
 
@@ -199,13 +210,13 @@ export function NdrDashboard() {
                   <th className="px-8 py-5 text-left text-[10px] font-bold text-rose-400 uppercase tracking-[0.2em] w-1/5">
                     Date & Time
                   </th>
-                  <th className="px-8 py-5 text-left text-[10px] font-bold text-rose-400 uppercase tracking-[0.2em] w-2/5">
+                  <th className="px-8 py-5 text-left text-[10px] font-bold text-rose-400 uppercase tracking-[0.2em] w-1/3">
                     Courier Remarks
                   </th>
-                  <th className="px-8 py-5 text-center text-[10px] font-bold text-rose-400 uppercase tracking-[0.2em] w-1/10">
+                  <th className="px-8 py-5 text-center text-[10px] font-bold text-rose-400 uppercase tracking-[0.2em] w-1/12">
                     Attempts
                   </th>
-                  <th className="px-8 py-5 text-right text-[10px] font-bold text-rose-400 uppercase tracking-[0.2em] w-1/10">
+                  <th className="px-8 py-5 text-right text-[10px] font-bold text-rose-400 uppercase tracking-[0.2em] w-1/4">
                     Action
                   </th>
                 </tr>
@@ -214,6 +225,8 @@ export function NdrDashboard() {
                 {Array.isArray(paginatedNdrList) && paginatedNdrList.length > 0 ? (
                   paginatedNdrList.map((ndr) => {
                     const isMyOrder = myOrderAwbs.has(normalizeAwb(ndr.awb_number));
+                    const hasHistory = (ndr.history_count ?? 0) > 0 || ndr.db_status === "responded";
+
                     return (
                       <tr key={ndr.awb_number} className="hover:bg-pink-50/10 transition-colors">
                         {/* AWB */}
@@ -251,16 +264,33 @@ export function NdrDashboard() {
                           </span>
                         </td>
 
-                        {/* Action Button */}
+                        {/* Action Buttons */}
                         <td className="px-8 py-6 text-right">
-                          <button
-                            onClick={() => handleTakeAction(ndr.awb_number)}
-                            disabled={!isMyOrder}
-                            title={isMyOrder ? "Respond to NDR exception" : "Action disabled: AWB does not belong to your store orders"}
-                            className="bg-pink-600 hover:bg-pink-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed disabled:shadow-none text-white font-bold rounded-xl px-4 py-2 text-xs uppercase tracking-wider transition-all shadow-md shadow-pink-500/10 hover:shadow-pink-500/20"
-                          >
-                            Respond
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleViewHistory(ndr.awb_number)}
+                              title="View persistent audit history"
+                              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-all ${
+                                hasHistory
+                                  ? "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100 shadow-sm"
+                                  : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"
+                              }`}
+                            >
+                              <History className="w-3.5 h-3.5" />
+                              View History
+                              {hasHistory && (
+                                <span className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0 animate-pulse" />
+                              )}
+                            </button>
+
+                            <button
+                              onClick={() => handleTakeAction(ndr.awb_number)}
+                              title="Respond to NDR exception"
+                              className="bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl px-4 py-2 text-xs uppercase tracking-wider transition-all shadow-md shadow-pink-500/10 hover:shadow-pink-500/20"
+                            >
+                              Respond
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -332,6 +362,18 @@ export function NdrDashboard() {
           }}
           awbNumber={selectedAwb}
           onSuccess={handleActionSuccess}
+        />
+      )}
+
+      {/* Audit History Modal */}
+      {historyAwb && (
+        <NdrHistoryModal
+          isOpen={isHistoryOpen}
+          onClose={() => {
+            setIsHistoryOpen(false);
+            setHistoryAwb(null);
+          }}
+          awbNumber={historyAwb}
         />
       )}
     </div>
