@@ -22,6 +22,7 @@
     "typescript": "~5.9.2"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1116.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -61,6 +62,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@types/sharp": "^0.32.0",
     "@workspace/api-client-react": "workspace:*",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
@@ -89,6 +91,7 @@
     "react-image-crop": "^11.0.10",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.2",
+    "sharp": "^0.35.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "catalog:",
     "tailwindcss": "catalog:",

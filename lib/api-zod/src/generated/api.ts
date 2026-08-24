@@ -8,6 +8,186 @@
 import * as zod from "zod";
 
 /**
+ * @summary List published home banners for storefront
+ */
+export const ListPublicHomeBannersResponseItem = zod.object({
+  id: zod.number(),
+  title: zod.string().nullish(),
+  subtitle: zod.string().nullish(),
+  desktopImageUrl: zod.string(),
+  mobileImageUrl: zod.string(),
+  ctaText: zod.string().nullish(),
+  ctaUrl: zod.string().nullish(),
+  linkType: zod.enum(["internal", "external"]),
+  sortOrder: zod.number(),
+  isActive: zod.boolean(),
+  startsAt: zod.coerce.date().nullish(),
+  endsAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const ListPublicHomeBannersResponse = zod.array(
+  ListPublicHomeBannersResponseItem,
+);
+
+/**
+ * @summary List all home banners for admin
+ */
+export const ListAdminHomeBannersResponseItem = zod.object({
+  id: zod.number(),
+  title: zod.string().nullish(),
+  subtitle: zod.string().nullish(),
+  desktopImageUrl: zod.string(),
+  mobileImageUrl: zod.string(),
+  ctaText: zod.string().nullish(),
+  ctaUrl: zod.string().nullish(),
+  linkType: zod.enum(["internal", "external"]),
+  sortOrder: zod.number(),
+  isActive: zod.boolean(),
+  startsAt: zod.coerce.date().nullish(),
+  endsAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const ListAdminHomeBannersResponse = zod.array(
+  ListAdminHomeBannersResponseItem,
+);
+
+/**
+ * @summary Create a home banner
+ */
+export const CreateHomeBannerBody = zod.object({
+  title: zod.string().nullish(),
+  subtitle: zod.string().nullish(),
+  desktopImageUrl: zod.string(),
+  mobileImageUrl: zod.string(),
+  ctaText: zod.string().nullish(),
+  ctaUrl: zod.string().nullish(),
+  linkType: zod.enum(["internal", "external"]).optional(),
+  sortOrder: zod.number().optional(),
+  isActive: zod.boolean().optional(),
+  startsAt: zod.coerce.date().nullish(),
+  endsAt: zod.coerce.date().nullish(),
+});
+
+/**
+ * @summary Reorder home banners
+ */
+export const ReorderHomeBannersBody = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      sortOrder: zod.number(),
+    }),
+  ),
+});
+
+export const ReorderHomeBannersResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Get single home banner
+ */
+export const GetHomeBannerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetHomeBannerResponse = zod.object({
+  id: zod.number(),
+  title: zod.string().nullish(),
+  subtitle: zod.string().nullish(),
+  desktopImageUrl: zod.string(),
+  mobileImageUrl: zod.string(),
+  ctaText: zod.string().nullish(),
+  ctaUrl: zod.string().nullish(),
+  linkType: zod.enum(["internal", "external"]),
+  sortOrder: zod.number(),
+  isActive: zod.boolean(),
+  startsAt: zod.coerce.date().nullish(),
+  endsAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Update home banner
+ */
+export const UpdateHomeBannerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateHomeBannerBody = zod.object({
+  title: zod.string().nullish(),
+  subtitle: zod.string().nullish(),
+  desktopImageUrl: zod.string().optional(),
+  mobileImageUrl: zod.string().optional(),
+  ctaText: zod.string().nullish(),
+  ctaUrl: zod.string().nullish(),
+  linkType: zod.enum(["internal", "external"]).optional(),
+  sortOrder: zod.number().optional(),
+  isActive: zod.boolean().optional(),
+  startsAt: zod.coerce.date().nullish(),
+  endsAt: zod.coerce.date().nullish(),
+});
+
+export const UpdateHomeBannerResponse = zod.object({
+  id: zod.number(),
+  title: zod.string().nullish(),
+  subtitle: zod.string().nullish(),
+  desktopImageUrl: zod.string(),
+  mobileImageUrl: zod.string(),
+  ctaText: zod.string().nullish(),
+  ctaUrl: zod.string().nullish(),
+  linkType: zod.enum(["internal", "external"]),
+  sortOrder: zod.number(),
+  isActive: zod.boolean(),
+  startsAt: zod.coerce.date().nullish(),
+  endsAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete home banner
+ */
+export const DeleteHomeBannerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteHomeBannerResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Toggle active status of home banner
+ */
+export const ToggleHomeBannerStatusParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ToggleHomeBannerStatusBody = zod.object({
+  isActive: zod.boolean(),
+});
+
+export const ToggleHomeBannerStatusResponse = zod.object({
+  id: zod.number(),
+  title: zod.string().nullish(),
+  subtitle: zod.string().nullish(),
+  desktopImageUrl: zod.string(),
+  mobileImageUrl: zod.string(),
+  ctaText: zod.string().nullish(),
+  ctaUrl: zod.string().nullish(),
+  linkType: zod.enum(["internal", "external"]),
+  sortOrder: zod.number(),
+  isActive: zod.boolean(),
+  startsAt: zod.coerce.date().nullish(),
+  endsAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
  * Returns server health status
  * @summary Health check
  */

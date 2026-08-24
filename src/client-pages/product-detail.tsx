@@ -111,11 +111,61 @@ function StarRating({ rating, size = "md" }: { rating: number; size?: "sm" | "md
   );
 }
 
-function DetailGallery({ images: rawImages, productName }: { images: string[]; productName: string }) {
-  const images = Array.isArray(rawImages) ? rawImages : (typeof rawImages === "string" ? JSON.parse(rawImages) : []);
-  const resolved = images.map(resolveImageUrl).filter(Boolean);
+function DetailGallery({
+  images: rawImages,
+  media,
+  selectedColor,
+  productName,
+}: {
+  images: string[];
+  media?: any;
+  selectedColor?: string;
+  productName: string;
+}) {
+  let displayList: string[] = [];
+
+  if (media && typeof media === "object") {
+    let colorImgs: string[] = [];
+    let featuredImgs: string[] = [];
+
+    if (Array.isArray(media.featuredImages) && media.featuredImages.length > 0) {
+      featuredImgs = media.featuredImages.map((img: any) => img.urls?.gallery || img.urls?.card).filter(Boolean);
+    }
+
+    if (selectedColor) {
+      const cv = media.colorVariants?.find(
+        (c: any) => c.color?.toLowerCase().trim() === selectedColor.toLowerCase().trim()
+      );
+      if (cv && Array.isArray(cv.images) && cv.images.length > 0) {
+        colorImgs = cv.images.map((img: any) => img.urls?.gallery || img.urls?.card).filter(Boolean);
+      }
+    }
+
+    if (colorImgs.length > 0) {
+      const combined = [...colorImgs];
+      for (const fImg of featuredImgs) {
+        if (!combined.includes(fImg)) {
+          combined.push(fImg);
+        }
+      }
+      displayList = combined;
+    } else if (featuredImgs.length > 0) {
+      displayList = featuredImgs;
+    }
+  }
+
+  if (displayList.length === 0) {
+    displayList = Array.isArray(rawImages) ? rawImages : (typeof rawImages === "string" ? (() => { try { return JSON.parse(rawImages); } catch { return []; } })() : []);
+  }
+
+  const resolved = displayList.map(resolveImageUrl).filter(Boolean);
   const [activeIndex, setActiveIndex] = useState(0);
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: resolved.length > 1 });
+
+  useEffect(() => {
+    setActiveIndex(0);
+    emblaApi?.scrollTo(0);
+  }, [selectedColor, emblaApi, resolved.join(",")]);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -134,8 +184,8 @@ function DetailGallery({ images: rawImages, productName }: { images: string[]; p
 
   if (resolved.length === 0) {
     return (
-      <div className="w-full rounded-2xl bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center" style={{ aspectRatio: "3/4", maxHeight: 520 }}>
-        <div className="flex flex-col items-center gap-2 opacity-50">
+      <div className="w-full rounded-2xl bg-gradient-to-br from-pink-100 to-rose-100 flex flex-col items-center justify-center p-6" style={{ aspectRatio: "3/4", maxHeight: 520 }}>
+        <div className="flex flex-col items-center gap-2 opacity-60">
           <svg viewBox="0 0 100 160" className="w-20 h-32 text-rose-300" fill="none">
             <ellipse cx="50" cy="18" rx="12" ry="13" fill="currentColor" opacity="0.5" />
             <path d="M42 30 Q50 36 58 30" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
@@ -165,6 +215,7 @@ function DetailGallery({ images: rawImages, productName }: { images: string[]; p
                   alt={`${productName} - ${i + 1}`}
                   className="w-full h-full object-contain"
                   loading={i === 0 ? "eager" : "lazy"}
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                 />
               </div>
             ))}
@@ -485,7 +536,12 @@ export default function ProductDetail() {
 
             {/* Left: Gallery */}
             <div>
-              <DetailGallery images={displayImages} productName={product.name} />
+              <DetailGallery
+                images={displayImages}
+                media={(product as any)?.media}
+                selectedColor={selectedColor}
+                productName={product.name}
+              />
             </div>
 
             {/* Right: Product Info */}

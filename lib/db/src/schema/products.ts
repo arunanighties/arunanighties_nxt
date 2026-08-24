@@ -7,6 +7,28 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
+export interface ImageVariantUrls {
+  card: string;
+  gallery: string;
+  original?: string;
+}
+
+export interface ProductImageItem {
+  id: string;
+  urls: ImageVariantUrls;
+  sortOrder: number;
+}
+
+export interface ProductColorMedia {
+  color: string;
+  images: ProductImageItem[];
+}
+
+export interface ProductMediaSchema {
+  featuredImages: ProductImageItem[]; // max 3
+  colorVariants: ProductColorMedia[];  // max 5 images per color
+}
+
 export const productsTable = sqliteTable("products", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
@@ -21,6 +43,7 @@ export const productsTable = sqliteTable("products", {
   images: text("images", { mode: "json" }).$type<string[]>().notNull(),
   sizes: text("sizes", { mode: "json" }).$type<{ size: string; quantity: number }[]>().notNull(),
   inventory: text("inventory", { mode: "json" }).$type<Record<string, Record<string, { hex: string; qty: number; price: number; mrp: number }>>>().default({}),
+  media: text("media", { mode: "json" }).$type<ProductMediaSchema>(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()

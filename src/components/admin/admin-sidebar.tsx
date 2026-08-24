@@ -1,9 +1,9 @@
 import { 
   LayoutDashboard, BarChart3, Package, Tag, ShoppingCart, 
-  Layers, Settings, LogOut, AlertTriangle, Users 
+  Layers, Settings, LogOut, AlertTriangle, Users, Image as ImageIcon 
 } from "lucide-react";
 
-export type Tab = "overview" | "reports" | "inventory" | "products" | "orders" | "ndr" | "customers" | "collections" | "sections" | "settings" | "lowstock";
+export type Tab = "overview" | "reports" | "inventory" | "products" | "orders" | "ndr" | "customers" | "collections" | "sections" | "banners" | "settings" | "lowstock";
 
 interface AdminSidebarProps {
   activeTab: Tab;
@@ -22,8 +22,10 @@ export default function AdminSidebar({ activeTab, setActiveTab, onLogout }: Admi
     { id: "customers", label: "Customers", icon: Users },
     { id: "collections", label: "Collections", icon: Tag },
     { id: "sections", label: "Sections", icon: Layers },
+    { id: "banners", label: "Home Banners", icon: ImageIcon },
     { id: "settings", label: "Settings", icon: Settings },
   ];
+
 
 
   return (

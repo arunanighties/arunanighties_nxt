@@ -20,13 +20,18 @@ import type {
   AdminLoginBody,
   AdminLoginResponse,
   AdminMeResponse,
+  CreateHomeBannerBody,
   CreateProductBody,
   ErrorResponse,
   HealthStatus,
+  HomeBanner,
   Order,
   Product,
+  ReorderHomeBannersBody,
   StatsResponse,
   SuccessResponse,
+  ToggleHomeBannerStatusBody,
+  UpdateHomeBannerBody,
   UpdateProductBody,
 } from "./api.schemas";
 
@@ -38,6 +43,674 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+/**
+ * @summary List published home banners for storefront
+ */
+export const getListPublicHomeBannersUrl = () => {
+  return `/api/home/banners`;
+};
+
+export const listPublicHomeBanners = async (
+  options?: RequestInit,
+): Promise<HomeBanner[]> => {
+  return customFetch<HomeBanner[]>(getListPublicHomeBannersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPublicHomeBannersQueryKey = () => {
+  return [`/api/home/banners`] as const;
+};
+
+export const getListPublicHomeBannersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPublicHomeBanners>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicHomeBanners>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPublicHomeBannersQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPublicHomeBanners>>
+  > = ({ signal }) => listPublicHomeBanners({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicHomeBanners>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPublicHomeBannersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPublicHomeBanners>>
+>;
+export type ListPublicHomeBannersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List published home banners for storefront
+ */
+
+export function useListPublicHomeBanners<
+  TData = Awaited<ReturnType<typeof listPublicHomeBanners>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicHomeBanners>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPublicHomeBannersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List all home banners for admin
+ */
+export const getListAdminHomeBannersUrl = () => {
+  return `/api/admin/home-banners`;
+};
+
+export const listAdminHomeBanners = async (
+  options?: RequestInit,
+): Promise<HomeBanner[]> => {
+  return customFetch<HomeBanner[]>(getListAdminHomeBannersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListAdminHomeBannersQueryKey = () => {
+  return [`/api/admin/home-banners`] as const;
+};
+
+export const getListAdminHomeBannersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAdminHomeBanners>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminHomeBanners>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListAdminHomeBannersQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listAdminHomeBanners>>
+  > = ({ signal }) => listAdminHomeBanners({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminHomeBanners>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListAdminHomeBannersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAdminHomeBanners>>
+>;
+export type ListAdminHomeBannersQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List all home banners for admin
+ */
+
+export function useListAdminHomeBanners<
+  TData = Awaited<ReturnType<typeof listAdminHomeBanners>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminHomeBanners>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAdminHomeBannersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a home banner
+ */
+export const getCreateHomeBannerUrl = () => {
+  return `/api/admin/home-banners`;
+};
+
+export const createHomeBanner = async (
+  createHomeBannerBody: CreateHomeBannerBody,
+  options?: RequestInit,
+): Promise<HomeBanner> => {
+  return customFetch<HomeBanner>(getCreateHomeBannerUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createHomeBannerBody),
+  });
+};
+
+export const getCreateHomeBannerMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createHomeBanner>>,
+    TError,
+    { data: BodyType<CreateHomeBannerBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createHomeBanner>>,
+  TError,
+  { data: BodyType<CreateHomeBannerBody> },
+  TContext
+> => {
+  const mutationKey = ["createHomeBanner"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createHomeBanner>>,
+    { data: BodyType<CreateHomeBannerBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createHomeBanner(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateHomeBannerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createHomeBanner>>
+>;
+export type CreateHomeBannerMutationBody = BodyType<CreateHomeBannerBody>;
+export type CreateHomeBannerMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a home banner
+ */
+export const useCreateHomeBanner = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createHomeBanner>>,
+    TError,
+    { data: BodyType<CreateHomeBannerBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createHomeBanner>>,
+  TError,
+  { data: BodyType<CreateHomeBannerBody> },
+  TContext
+> => {
+  return useMutation(getCreateHomeBannerMutationOptions(options));
+};
+
+/**
+ * @summary Reorder home banners
+ */
+export const getReorderHomeBannersUrl = () => {
+  return `/api/admin/home-banners/reorder`;
+};
+
+export const reorderHomeBanners = async (
+  reorderHomeBannersBody: ReorderHomeBannersBody,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getReorderHomeBannersUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(reorderHomeBannersBody),
+  });
+};
+
+export const getReorderHomeBannersMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reorderHomeBanners>>,
+    TError,
+    { data: BodyType<ReorderHomeBannersBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reorderHomeBanners>>,
+  TError,
+  { data: BodyType<ReorderHomeBannersBody> },
+  TContext
+> => {
+  const mutationKey = ["reorderHomeBanners"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reorderHomeBanners>>,
+    { data: BodyType<ReorderHomeBannersBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return reorderHomeBanners(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReorderHomeBannersMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reorderHomeBanners>>
+>;
+export type ReorderHomeBannersMutationBody = BodyType<ReorderHomeBannersBody>;
+export type ReorderHomeBannersMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Reorder home banners
+ */
+export const useReorderHomeBanners = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reorderHomeBanners>>,
+    TError,
+    { data: BodyType<ReorderHomeBannersBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof reorderHomeBanners>>,
+  TError,
+  { data: BodyType<ReorderHomeBannersBody> },
+  TContext
+> => {
+  return useMutation(getReorderHomeBannersMutationOptions(options));
+};
+
+/**
+ * @summary Get single home banner
+ */
+export const getGetHomeBannerUrl = (id: number) => {
+  return `/api/admin/home-banners/${id}`;
+};
+
+export const getHomeBanner = async (
+  id: number,
+  options?: RequestInit,
+): Promise<HomeBanner> => {
+  return customFetch<HomeBanner>(getGetHomeBannerUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetHomeBannerQueryKey = (id: number) => {
+  return [`/api/admin/home-banners/${id}`] as const;
+};
+
+export const getGetHomeBannerQueryOptions = <
+  TData = Awaited<ReturnType<typeof getHomeBanner>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getHomeBanner>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetHomeBannerQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getHomeBanner>>> = ({
+    signal,
+  }) => getHomeBanner(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getHomeBanner>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetHomeBannerQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getHomeBanner>>
+>;
+export type GetHomeBannerQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get single home banner
+ */
+
+export function useGetHomeBanner<
+  TData = Awaited<ReturnType<typeof getHomeBanner>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getHomeBanner>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetHomeBannerQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update home banner
+ */
+export const getUpdateHomeBannerUrl = (id: number) => {
+  return `/api/admin/home-banners/${id}`;
+};
+
+export const updateHomeBanner = async (
+  id: number,
+  updateHomeBannerBody: UpdateHomeBannerBody,
+  options?: RequestInit,
+): Promise<HomeBanner> => {
+  return customFetch<HomeBanner>(getUpdateHomeBannerUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateHomeBannerBody),
+  });
+};
+
+export const getUpdateHomeBannerMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateHomeBanner>>,
+    TError,
+    { id: number; data: BodyType<UpdateHomeBannerBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateHomeBanner>>,
+  TError,
+  { id: number; data: BodyType<UpdateHomeBannerBody> },
+  TContext
+> => {
+  const mutationKey = ["updateHomeBanner"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateHomeBanner>>,
+    { id: number; data: BodyType<UpdateHomeBannerBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateHomeBanner(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateHomeBannerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateHomeBanner>>
+>;
+export type UpdateHomeBannerMutationBody = BodyType<UpdateHomeBannerBody>;
+export type UpdateHomeBannerMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update home banner
+ */
+export const useUpdateHomeBanner = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateHomeBanner>>,
+    TError,
+    { id: number; data: BodyType<UpdateHomeBannerBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateHomeBanner>>,
+  TError,
+  { id: number; data: BodyType<UpdateHomeBannerBody> },
+  TContext
+> => {
+  return useMutation(getUpdateHomeBannerMutationOptions(options));
+};
+
+/**
+ * @summary Delete home banner
+ */
+export const getDeleteHomeBannerUrl = (id: number) => {
+  return `/api/admin/home-banners/${id}`;
+};
+
+export const deleteHomeBanner = async (
+  id: number,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteHomeBannerUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteHomeBannerMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteHomeBanner>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteHomeBanner>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteHomeBanner"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteHomeBanner>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteHomeBanner(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteHomeBannerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteHomeBanner>>
+>;
+
+export type DeleteHomeBannerMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete home banner
+ */
+export const useDeleteHomeBanner = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteHomeBanner>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteHomeBanner>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteHomeBannerMutationOptions(options));
+};
+
+/**
+ * @summary Toggle active status of home banner
+ */
+export const getToggleHomeBannerStatusUrl = (id: number) => {
+  return `/api/admin/home-banners/${id}/status`;
+};
+
+export const toggleHomeBannerStatus = async (
+  id: number,
+  toggleHomeBannerStatusBody: ToggleHomeBannerStatusBody,
+  options?: RequestInit,
+): Promise<HomeBanner> => {
+  return customFetch<HomeBanner>(getToggleHomeBannerStatusUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(toggleHomeBannerStatusBody),
+  });
+};
+
+export const getToggleHomeBannerStatusMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof toggleHomeBannerStatus>>,
+    TError,
+    { id: number; data: BodyType<ToggleHomeBannerStatusBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof toggleHomeBannerStatus>>,
+  TError,
+  { id: number; data: BodyType<ToggleHomeBannerStatusBody> },
+  TContext
+> => {
+  const mutationKey = ["toggleHomeBannerStatus"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof toggleHomeBannerStatus>>,
+    { id: number; data: BodyType<ToggleHomeBannerStatusBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return toggleHomeBannerStatus(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ToggleHomeBannerStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof toggleHomeBannerStatus>>
+>;
+export type ToggleHomeBannerStatusMutationBody =
+  BodyType<ToggleHomeBannerStatusBody>;
+export type ToggleHomeBannerStatusMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Toggle active status of home banner
+ */
+export const useToggleHomeBannerStatus = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof toggleHomeBannerStatus>>,
+    TError,
+    { id: number; data: BodyType<ToggleHomeBannerStatusBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof toggleHomeBannerStatus>>,
+  TError,
+  { id: number; data: BodyType<ToggleHomeBannerStatusBody> },
+  TContext
+> => {
+  return useMutation(getToggleHomeBannerStatusMutationOptions(options));
+};
 
 /**
  * Returns server health status

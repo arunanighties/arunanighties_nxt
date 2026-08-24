@@ -3,6 +3,7 @@ import { adminAuth as firebaseAdminAuth } from "@/lib/firebaseAdmin";
 import { generateAdminToken, generateUserToken } from "@/lib/adminAuth";
 import { db, usersTable } from "@/db";
 import { eq } from "drizzle-orm";
+import { NotificationService } from "@/services/notification.service";
 
 const ADMIN_PHONES = (process.env.ADMIN_PHONES || process.env.ADMIN_PHONE || "9704761386")
   .split(",")
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
         name: null
       }).returning();
       user = newUser;
+      NotificationService.notifyCustomerRegistered(newUser);
     }
 
     const token = generateUserToken(user.id);

@@ -1,4 +1,4 @@
-import { sendOrderPlacedEmail, sendOrderDeliveredEmail, OrderData } from "./email.service";
+import { sendOrderPlacedEmail, sendOrderDeliveredEmail, sendCustomerRegisteredEmail, OrderData, UserData } from "./email.service";
 import { logger } from "@/lib/serverLogger";
 
 /**
@@ -33,6 +33,21 @@ export class NotificationService {
         await sendOrderDeliveredEmail(order);
       } catch (error: any) {
         logger.error({ orderId: order.id, error: error.message }, "[NotificationService] Error dispatching order_delivered notification");
+      }
+    });
+  }
+
+  /**
+   * Dispatches notifications when a new customer registers.
+   * Runs asynchronously to prevent blocking request handlers.
+   */
+  static notifyCustomerRegistered(user: UserData): void {
+    Promise.resolve().then(async () => {
+      try {
+        logger.info({ userId: user.id }, "[NotificationService] Dispatching customer_registered notification...");
+        await sendCustomerRegisteredEmail(user);
+      } catch (error: any) {
+        logger.error({ userId: user.id, error: error.message }, "[NotificationService] Error dispatching customer_registered notification");
       }
     });
   }

@@ -2,6 +2,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { useListProducts } from "@workspace/api-client-react";
 import { ProductCarousel } from "@/components/product-carousel";
+import { HomeBannerCarousel } from "@/components/home-banner-carousel";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Loader2, Sparkles, RotateCcw, Phone } from "lucide-react";
 import { Link } from "wouter";
@@ -88,65 +89,70 @@ export default function Home() {
   const unsectionedProducts = productsArray.filter((p) => !sectionedProductIds.has(p.id));
   const hasSections = sections.length > 0;
 
+  const staticHeroFallback = (
+    <section className="relative w-full min-h-[560px] flex items-center overflow-hidden bg-gradient-to-br from-pink-100 via-rose-50 to-pink-200">
+      <div className="absolute -top-24 -right-24 w-96 h-96 bg-pink-300/30 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-16 -left-16 w-72 h-72 bg-rose-200/40 rounded-full blur-2xl pointer-events-none" />
+
+      <div className="container mx-auto px-4 md:px-6 relative z-10 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <span className="inline-flex items-center gap-1.5 text-rose-500 font-semibold tracking-wider uppercase text-xs mb-4 bg-rose-100 border border-rose-200 px-3 py-1 rounded-full">
+              <Sparkles className="w-3 h-3" /> {settings.heroBadge}
+            </span>
+            <h1 className="font-serif text-4xl md:text-6xl font-bold text-rose-900 leading-tight mb-5">
+              {settings.heroTitle}<br />
+              <span className="text-primary">{settings.heroTitleHighlight}</span>
+            </h1>
+            <p className="text-rose-700/80 text-lg mb-8 max-w-md leading-relaxed">{settings.heroSubtitle}</p>
+            <div className="flex items-center gap-4 flex-wrap">
+              <Link href="/new-arrivals">
+                <Button size="lg" className="bg-primary text-white hover:bg-primary/90 text-base px-8 h-12 rounded-full shadow-md shadow-rose-200 group">
+                  Shop Nighties <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+              <Link href="/collections">
+                <Button variant="outline" size="lg" className="border-rose-300 text-rose-700 hover:bg-rose-50 h-12 rounded-full">
+                  View Collections
+                </Button>
+              </Link>
+            </div>
+            <div className="mt-8 flex items-center gap-6 text-xs text-rose-600/70 flex-wrap">
+              <span>✓ 100% Pure Cotton</span>
+            </div>
+          </div>
+
+          <div className="hidden md:flex justify-center items-center animate-in fade-in slide-in-from-right-8 duration-700">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-pink-300/40 to-rose-200/40 rounded-3xl blur-xl scale-105" />
+              <img
+                src="https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&q=80"
+                alt="Indian women's traditional nighty"
+                className="relative rounded-3xl w-80 h-96 object-cover shadow-xl shadow-rose-200/50 border-4 border-white/70"
+                onError={(e) => {
+                  (e.currentTarget.parentElement as HTMLElement).innerHTML =
+                    '<div class="w-80 h-96 rounded-3xl bg-gradient-to-br from-pink-200 to-rose-300 flex items-center justify-center text-rose-400 text-6xl">🌸</div>';
+                }}
+              />
+              <div className="absolute -bottom-4 -left-4 bg-white rounded-2xl shadow-lg px-4 py-3 border border-rose-100">
+                <p className="text-xs text-rose-400 font-medium">Starting from</p>
+                <p className="text-rose-700 font-bold text-lg">₹{settings.heroStartingPrice} only</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
 
       <main className="flex-grow">
-        {/* ── Hero ─────────────────────────────────────── */}
-        <section className="relative w-full min-h-[560px] flex items-center overflow-hidden bg-gradient-to-br from-pink-100 via-rose-50 to-pink-200">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-pink-300/30 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-16 -left-16 w-72 h-72 bg-rose-200/40 rounded-full blur-2xl pointer-events-none" />
+        {/* ── Dynamic Hero Banner Carousel ──────────────── */}
+        <HomeBannerCarousel fallback={staticHeroFallback} />
 
-          <div className="container mx-auto px-4 md:px-6 relative z-10 py-16">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-              <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                <span className="inline-flex items-center gap-1.5 text-rose-500 font-semibold tracking-wider uppercase text-xs mb-4 bg-rose-100 border border-rose-200 px-3 py-1 rounded-full">
-                  <Sparkles className="w-3 h-3" /> {settings.heroBadge}
-                </span>
-                <h1 className="font-serif text-4xl md:text-6xl font-bold text-rose-900 leading-tight mb-5">
-                  {settings.heroTitle}<br />
-                  <span className="text-primary">{settings.heroTitleHighlight}</span>
-                </h1>
-                <p className="text-rose-700/80 text-lg mb-8 max-w-md leading-relaxed">{settings.heroSubtitle}</p>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <Link href="/new-arrivals">
-                    <Button size="lg" className="bg-primary text-white hover:bg-primary/90 text-base px-8 h-12 rounded-full shadow-md shadow-rose-200 group">
-                      Shop Nighties <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </Button>
-                  </Link>
-                  <Link href="/collections">
-                    <Button variant="outline" size="lg" className="border-rose-300 text-rose-700 hover:bg-rose-50 h-12 rounded-full">
-                      View Collections
-                    </Button>
-                  </Link>
-                </div>
-                <div className="mt-8 flex items-center gap-6 text-xs text-rose-600/70 flex-wrap">
-                  <span>✓ 100% Pure Cotton</span>
-                </div>
-              </div>
-
-              <div className="hidden md:flex justify-center items-center animate-in fade-in slide-in-from-right-8 duration-700">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-pink-300/40 to-rose-200/40 rounded-3xl blur-xl scale-105" />
-                  <img
-                    src="https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&q=80"
-                    alt="Indian women's traditional nighty"
-                    className="relative rounded-3xl w-80 h-96 object-cover shadow-xl shadow-rose-200/50 border-4 border-white/70"
-                    onError={(e) => {
-                      (e.currentTarget.parentElement as HTMLElement).innerHTML =
-                        '<div class="w-80 h-96 rounded-3xl bg-gradient-to-br from-pink-200 to-rose-300 flex items-center justify-center text-rose-400 text-6xl">🌸</div>';
-                    }}
-                  />
-                  <div className="absolute -bottom-4 -left-4 bg-white rounded-2xl shadow-lg px-4 py-3 border border-rose-100">
-                    <p className="text-xs text-rose-400 font-medium">Starting from</p>
-                    <p className="text-rose-700 font-bold text-lg">₹{settings.heroStartingPrice} only</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
 
         {/* ── Dynamic Sections ─────────────────────────── */}
         {sectionsLoading ? (

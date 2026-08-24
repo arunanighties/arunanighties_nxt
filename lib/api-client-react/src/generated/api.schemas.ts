@@ -126,3 +126,85 @@ export interface SuccessResponse {
 export interface ErrorResponse {
   error: string;
 }
+
+export type HomeBannerLinkType =
+  (typeof HomeBannerLinkType)[keyof typeof HomeBannerLinkType];
+
+export const HomeBannerLinkType = {
+  internal: "internal",
+  external: "external",
+} as const;
+
+export interface HomeBanner {
+  id: number;
+  title?: string | null;
+  subtitle?: string | null;
+  desktopImageUrl: string;
+  mobileImageUrl: string;
+  ctaText?: string | null;
+  ctaUrl?: string | null;
+  linkType: HomeBannerLinkType;
+  sortOrder: number;
+  isActive: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateHomeBannerBodyLinkType =
+  (typeof CreateHomeBannerBodyLinkType)[keyof typeof CreateHomeBannerBodyLinkType];
+
+export const CreateHomeBannerBodyLinkType = {
+  internal: "internal",
+  external: "external",
+} as const;
+
+export interface CreateHomeBannerBody {
+  title?: string | null;
+  subtitle?: string | null;
+  desktopImageUrl: string;
+  mobileImageUrl: string;
+  ctaText?: string | null;
+  ctaUrl?: string | null;
+  linkType?: CreateHomeBannerBodyLinkType;
+  sortOrder?: number;
+  isActive?: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+}
+
+export type UpdateHomeBannerBodyLinkType =
+  (typeof UpdateHomeBannerBodyLinkType)[keyof typeof UpdateHomeBannerBodyLinkType];
+
+export const UpdateHomeBannerBodyLinkType = {
+  internal: "internal",
+  external: "external",
+} as const;
+
+export interface UpdateHomeBannerBody {
+  title?: string | null;
+  subtitle?: string | null;
+  desktopImageUrl?: string;
+  mobileImageUrl?: string;
+  ctaText?: string | null;
+  ctaUrl?: string | null;
+  linkType?: UpdateHomeBannerBodyLinkType;
+  sortOrder?: number;
+  isActive?: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+}
+
+export type ReorderHomeBannersBodyItemsItem = {
+  id: number;
+  sortOrder: number;
+};
+
+export interface ReorderHomeBannersBody {
+  items: ReorderHomeBannersBodyItemsItem[];
+}
+
+export type ToggleHomeBannerStatusBody = {
+  isActive: boolean;
+};

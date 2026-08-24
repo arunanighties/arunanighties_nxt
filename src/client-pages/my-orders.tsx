@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { parseTrackingData } from "../utils/tracking";
 
 import { Navbar } from "@/components/layout/navbar";
+import { resolveImageUrl } from "@/components/product-gallery";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/context/user";
 import { getApiBase } from "@/lib/api-config";
@@ -490,26 +491,67 @@ function OrderItemCard({ order, user, reviewedSet, setReviewedSet, activeForm, s
             const reviewKey = `${order.id}:${item.id}`;
             const alreadyReviewed = item.id ? reviewedSet.has(reviewKey) : false;
             const isFormOpen = activeForm === reviewKey;
+            const rawImg = item.imageUrl || item.image || (item.id ? productsMap[item.id] : undefined);
+            const imgSrc = rawImg ? resolveImageUrl(rawImg) : null;
+            const productUrl = item.id ? `/product/${item.id}` : null;
 
             return (
               <div key={i}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex gap-3 flex-1 min-w-0">
-                    {(item.imageUrl || item.image || (item.id ? productsMap[item.id] : null)) ? (
-                      <div className="w-16 h-16 rounded-lg overflow-hidden border border-pink-100 flex-shrink-0 bg-pink-50">
-                        <img 
-                          src={item.imageUrl || item.image || (item.id ? productsMap[item.id] : undefined)} 
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+                    {productUrl ? (
+                      <a
+                        href={productUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-16 h-16 rounded-lg overflow-hidden border border-pink-100 flex-shrink-0 bg-pink-50 block hover:opacity-85 transition-opacity"
+                        title={`View ${item.name} in store`}
+                      >
+                        {imgSrc ? (
+                          <img
+                            src={imgSrc}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-pink-200">
+                            <Package className="w-6 h-6" />
+                          </div>
+                        )}
+                      </a>
                     ) : (
                       <div className="w-16 h-16 rounded-lg overflow-hidden border border-pink-100 flex-shrink-0 bg-pink-50 flex items-center justify-center">
-                        <Package className="w-6 h-6 text-pink-200" />
+                        {imgSrc ? (
+                          <img
+                            src={imgSrc}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <Package className="w-6 h-6 text-pink-200" />
+                        )}
                       </div>
                     )}
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <p className="font-bold text-rose-900 text-sm line-clamp-2">{item.name}</p>
+                      {productUrl ? (
+                        <a
+                          href={productUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-bold text-rose-900 text-sm line-clamp-2 hover:text-primary hover:underline transition-colors block"
+                          title={`View ${item.name} in store`}
+                        >
+                          {item.name}
+                        </a>
+                      ) : (
+                        <p className="font-bold text-rose-900 text-sm line-clamp-2">{item.name}</p>
+                      )}
                       <p className="text-[10px] text-rose-400 font-bold uppercase mt-0.5 tracking-wider">
                         {item.size || "DEFAULT"} / {item.color || "ANY"} — Qty: {item.qty || item.quantity || 1}
                       </p>

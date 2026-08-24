@@ -16,7 +16,224 @@ tags:
     description: Order operations
   - name: admin
     description: Admin authentication
+  - name: home-banners
+    description: Home banner carousel management
 paths:
+  /home/banners:
+    get:
+      operationId: listPublicHomeBanners
+      tags: [home-banners]
+      summary: List published home banners for storefront
+      responses:
+        "200":
+          description: List of active published banners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HomeBanner"
+
+  /admin/home-banners:
+    get:
+      operationId: listAdminHomeBanners
+      tags: [home-banners]
+      summary: List all home banners for admin
+      responses:
+        "200":
+          description: List of home banners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HomeBanner"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createHomeBanner
+      tags: [home-banners]
+      summary: Create a home banner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHomeBannerBody"
+      responses:
+        "201":
+          description: Created banner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeBanner"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/home-banners/reorder:
+    patch:
+      operationId: reorderHomeBanners
+      tags: [home-banners]
+      summary: Reorder home banners
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderHomeBannersBody"
+      responses:
+        "200":
+          description: Reordered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/home-banners/{id}:
+    get:
+      operationId: getHomeBanner
+      tags: [home-banners]
+      summary: Get single home banner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Home banner detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeBanner"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateHomeBanner
+      tags: [home-banners]
+      summary: Update home banner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateHomeBannerBody"
+      responses:
+        "200":
+          description: Updated home banner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeBanner"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteHomeBanner
+      tags: [home-banners]
+      summary: Delete home banner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/home-banners/{id}/status:
+    patch:
+      operationId: toggleHomeBannerStatus
+      tags: [home-banners]
+      summary: Toggle active status of home banner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isActive:
+                  type: boolean
+              required:
+                - isActive
+      responses:
+        "200":
+          description: Updated banner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeBanner"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /healthz:
     get:
       operationId: healthCheck
@@ -512,3 +729,147 @@ components:
           type: string
       required:
         - error
+
+    HomeBanner:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+          nullable: true
+        subtitle:
+          type: string
+          nullable: true
+        desktopImageUrl:
+          type: string
+        mobileImageUrl:
+          type: string
+        ctaText:
+          type: string
+          nullable: true
+        ctaUrl:
+          type: string
+          nullable: true
+        linkType:
+          type: string
+          enum: [internal, external]
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - desktopImageUrl
+        - mobileImageUrl
+        - linkType
+        - sortOrder
+        - isActive
+        - createdAt
+        - updatedAt
+
+    CreateHomeBannerBody:
+      type: object
+      properties:
+        title:
+          type: string
+          nullable: true
+        subtitle:
+          type: string
+          nullable: true
+        desktopImageUrl:
+          type: string
+        mobileImageUrl:
+          type: string
+        ctaText:
+          type: string
+          nullable: true
+        ctaUrl:
+          type: string
+          nullable: true
+        linkType:
+          type: string
+          enum: [internal, external]
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - desktopImageUrl
+        - mobileImageUrl
+
+    UpdateHomeBannerBody:
+      type: object
+      properties:
+        title:
+          type: string
+          nullable: true
+        subtitle:
+          type: string
+          nullable: true
+        desktopImageUrl:
+          type: string
+        mobileImageUrl:
+          type: string
+        ctaText:
+          type: string
+          nullable: true
+        ctaUrl:
+          type: string
+          nullable: true
+        linkType:
+          type: string
+          enum: [internal, external]
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ReorderHomeBannersBody:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              sortOrder:
+                type: integer
+            required:
+              - id
+              - sortOrder
+      required:
+        - items
+

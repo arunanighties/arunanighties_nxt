@@ -5,17 +5,22 @@ import { parseTrackingData } from "../utils/tracking";
 import { TrackingTimelineModal } from "../components/orders/TrackingTimelineModal";
 import { useAdminMe, useAdminLogout, useListProducts, useCreateProduct, useDeleteProduct, usePatchProduct } from "@workspace/api-client-react";
 import { ImageUploader, resolveImageUrl } from "@/components/admin/image-uploader";
+import { ProductMediaManager, type PendingMediaFile } from "@/components/admin/product-media-manager";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Plus, LogOut, Package, ShoppingCart, IndianRupee, CreditCard,
   AlertTriangle, Trash2, Users, Eye, LayoutDashboard, Tag,
   Settings, Pencil, Check, X, XCircle, Menu, Layers, Star, MessageSquare, GripVertical,
   ChevronDown, ChevronUp, ChevronRight, Search, Clock, FileText, MapPin, Phone, Truck,
-  Info, Download, BarChart3
+  Info, Download, BarChart3, Image as ImageIcon
 } from "lucide-react";
 import AdminSidebar, { type Tab as SidebarTab } from "../components/admin/admin-sidebar";
 import ReportsPage from "./admin/reports";
 import { NdrDashboard } from "../components/admin/orders/ndr-dashboard";
+import { BannerFormModal } from "@/components/admin/banner-form-modal";
+import { BannerPreviewModal } from "@/components/admin/banner-preview-modal";
+import { Button } from "@/components/ui/button";
+
 
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -442,6 +447,7 @@ function AdminOrderCard({
   toast: any
 }) {
   const queryClient = useQueryClient();
+  const { data: products } = useListProducts({ query: { enabled: true, queryKey: ["/api/products"] } as any });
   const isExpanded = expandedOrderId === order.id;
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
@@ -618,19 +624,88 @@ function AdminOrderCard({
                   <Package className="w-3.5 h-3.5" /> Ordered Items
                 </h4>
                 <div className="space-y-3">
-                  {itemsArray.map((item, idx) => (
-                    <div key={idx} className="bg-white border border-pink-100 rounded-xl p-4 flex justify-between items-center shadow-sm">
-                      <div>
-                        <p className="font-bold text-rose-900 text-sm">{item.name}</p>
-                        <p className="text-[10px] text-rose-400 font-bold uppercase mt-0.5 tracking-wider">
-                          {item.size || "DEFAULT"} / {item.color || "ANY"} — Qty: {item.qty || item.quantity || 1}
+                  {itemsArray.map((item, idx) => {
+                    const matchedProd = Array.isArray(products)
+                      ? products.find(
+                          (p: any) =>
+                            (item.id && p.id === item.id) ||
+                            (item.name && p.name?.toLowerCase() === item.name?.toLowerCase())
+                        )
+                      : null;
+                    const rawImage = item.imageUrl || item.image || item.productImage || matchedProd?.imageUrl;
+                    const imgSrc = rawImage ? resolveImageUrl(rawImage) : null;
+                    const productId = item.id || matchedProd?.id;
+                    const productUrl = productId ? `/product/${productId}` : null;
+
+                    return (
+                      <div key={idx} className="bg-white border border-pink-100 rounded-xl p-3 sm:p-4 flex items-center justify-between shadow-sm gap-4">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          {productUrl ? (
+                            <a
+                              href={productUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-14 h-16 rounded-lg overflow-hidden border border-pink-100 flex-shrink-0 bg-pink-50 block hover:opacity-80 transition-opacity"
+                              title={`View ${item.name} in store`}
+                            >
+                              {imgSrc ? (
+                                <img
+                                  src={imgSrc}
+                                  alt={item.name || "Product"}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLElement).style.display = "none";
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-pink-300">
+                                  <Package className="w-6 h-6" />
+                                </div>
+                              )}
+                            </a>
+                          ) : (
+                            <div className="w-14 h-16 rounded-lg overflow-hidden border border-pink-100 flex-shrink-0 bg-pink-50 flex items-center justify-center text-pink-300">
+                              {imgSrc ? (
+                                <img
+                                  src={imgSrc}
+                                  alt={item.name || "Product"}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLElement).style.display = "none";
+                                  }}
+                                />
+                              ) : (
+                                <Package className="w-6 h-6" />
+                              )}
+                            </div>
+                          )}
+
+                          <div className="min-w-0 flex-1">
+                            {productUrl ? (
+                              <a
+                                href={productUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-bold text-rose-900 text-sm hover:text-primary hover:underline transition-colors block truncate"
+                                title={`View ${item.name} in store`}
+                              >
+                                {item.name}
+                              </a>
+                            ) : (
+                              <p className="font-bold text-rose-900 text-sm truncate">{item.name}</p>
+                            )}
+                            <p className="text-[10px] text-rose-400 font-bold uppercase mt-0.5 tracking-wider">
+                              {item.size || "DEFAULT"} / {item.color || "ANY"} — Qty: {item.qty || item.quantity || 1}
+                            </p>
+                          </div>
+                        </div>
+
+                        <p className="font-serif font-bold text-rose-900 flex-shrink-0">
+                          ₹{(parseFloat(item.price || "0") * (item.qty || item.quantity || 1)).toLocaleString("en-IN")}
                         </p>
                       </div>
-                      <p className="font-serif font-bold text-rose-900">
-                        ₹{(parseFloat(item.price || "0") * (item.qty || item.quantity || 1)).toLocaleString("en-IN")}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -999,6 +1074,7 @@ export default function AdminDashboard() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
+  const [debouncedCustomerSearchQuery, setDebouncedCustomerSearchQuery] = useState("");
   const [customersCurrentPage, setCustomersCurrentPage] = useState(1);
   const [totalCustomerPages, setTotalCustomerPages] = useState(1);
   const [totalCustomersCount, setTotalCustomersCount] = useState(0);
@@ -1128,6 +1204,17 @@ export default function AdminDashboard() {
   const [editingSectionName, setEditingSectionName] = useState("");
   const [assignProductId, setAssignProductId] = useState<Record<number, string>>({});
 
+  // Home Banners
+  const [banners, setBanners] = useState<any[]>([]);
+  const [bannersLoading, setBannersLoading] = useState(false);
+  const [bannerModalOpen, setBannerModalOpen] = useState(false);
+  const [editingBanner, setEditingBanner] = useState<any | null>(null);
+  const [bannerPreviewModalOpen, setBannerPreviewModalOpen] = useState(false);
+  const [previewingBanner, setPreviewingBanner] = useState<any | null>(null);
+  const [deleteBannerConfirmId, setDeleteBannerConfirmId] = useState<number | null>(null);
+  const [bannerDeleting, setBannerDeleting] = useState(false);
+
+
   // Product form (add)
   const [form, setForm] = useState({
     name: "", description: "", stock: "0", rating: "4.3",
@@ -1135,6 +1222,9 @@ export default function AdminDashboard() {
     inventory: {} as Record<string, Record<string, { hex: string; qty: number; price?: number; mrp?: number }>>
   });
   const [productImages, setProductImages] = useState<string[]>([]);
+  const [selectedNewFiles, setSelectedNewFiles] = useState<File[]>([]);
+  const [newProductMedia, setNewProductMedia] = useState<any>({ featuredImages: [], colorVariants: [] });
+  const [pendingNewMediaFiles, setPendingNewMediaFiles] = useState<PendingMediaFile[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Product edit modal
@@ -1200,6 +1290,16 @@ export default function AdminDashboard() {
     } finally { setSectionsLoading(false); }
   };
 
+  const loadBanners = async () => {
+    setBannersLoading(true);
+    try {
+      const res = await fetchWithAuth("/admin/home-banners");
+      if (res.ok) setBanners(await res.json());
+    } catch (err) {
+      console.error("Failed to load banners:", err);
+    } finally { setBannersLoading(false); }
+  };
+
   const loadCustomers = async (page = 1, search = "") => {
     setCustomersLoading(true);
     try {
@@ -1228,15 +1328,30 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (auth?.authenticated) {
-      loadOrders(); loadStats(); loadCategories(); loadSettings(); loadSections();
+      loadOrders(); loadStats(); loadCategories(); loadSettings(); loadSections(); loadBanners();
     }
   }, [auth?.authenticated]);
 
   useEffect(() => {
-    if (auth?.authenticated && activeTab === "customers") {
-      loadCustomers(customersCurrentPage, customerSearchQuery);
+    if (auth?.authenticated && activeTab === "banners") {
+      loadBanners();
     }
-  }, [auth?.authenticated, activeTab, customersCurrentPage, customerSearchQuery]);
+  }, [auth?.authenticated, activeTab]);
+
+
+  // Debounce customer search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedCustomerSearchQuery(customerSearchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [customerSearchQuery]);
+
+  useEffect(() => {
+    if (auth?.authenticated && activeTab === "customers") {
+      loadCustomers(customersCurrentPage, debouncedCustomerSearchQuery);
+    }
+  }, [auth?.authenticated, activeTab, customersCurrentPage, debouncedCustomerSearchQuery]);
 
   // Keep stock in sync with size quantities for Add form
   useEffect(() => {
@@ -1321,11 +1436,33 @@ export default function AdminDashboard() {
         } as any,
       },
       {
-        onSuccess: async () => {
+        onSuccess: async (newProduct: any) => {
+          if (newProduct?.id && pendingNewMediaFiles.length > 0) {
+            const token = localStorage.getItem("adminToken") || "";
+            for (const item of pendingNewMediaFiles) {
+              try {
+                const formData = new FormData();
+                formData.append("file", item.file);
+                formData.append("target", item.target);
+                if (item.colorName) formData.append("color", item.colorName);
+
+                await fetch(`${apiBase()}/api/products/${newProduct.id}/media`, {
+                  method: "POST",
+                  headers: { Authorization: `Bearer ${token}` },
+                  body: formData,
+                });
+              } catch (e) {
+                console.error("Failed to upload image file to R2:", e);
+              }
+            }
+          }
           toast({ title: "Product added!", description: `${form.name} is now live on the website.` });
           setForm({ name: "", description: "", stock: "0", rating: "4.3", reviewCount: "1", reviewText: "", sizes: [], inventory: {} });
           setFormErrors({});
           setProductImages([]);
+          setSelectedNewFiles([]);
+          setNewProductMedia({ featuredImages: [], colorVariants: [] });
+          setPendingNewMediaFiles([]);
           queryClient.invalidateQueries();
           await loadStats();
         },
@@ -1553,6 +1690,88 @@ export default function AdminDashboard() {
       body: JSON.stringify({ order: reordered.map((s) => s.id) }),
     });
   };
+
+  const handleSaveBanner = async (bannerData: any) => {
+    const isEdit = !!editingBanner?.id;
+    const url = isEdit ? `/admin/home-banners/${editingBanner.id}` : "/admin/home-banners";
+    const method = isEdit ? "PATCH" : "POST";
+
+    const res = await adminFetch(url, {
+      method,
+      body: JSON.stringify(bannerData),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to save banner");
+    }
+
+    toast({ title: isEdit ? "Banner updated successfully" : "Banner created successfully" });
+    await loadBanners();
+  };
+
+  const handleToggleBannerStatus = async (bannerId: number, currentActive: boolean) => {
+    try {
+      const res = await adminFetch(`/admin/home-banners/${bannerId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive: !currentActive }),
+      });
+      if (res.ok) {
+        toast({ title: !currentActive ? "Banner activated" : "Banner deactivated" });
+        await loadBanners();
+      } else {
+        toast({ variant: "destructive", title: "Failed to update banner status" });
+      }
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error updating status" });
+    }
+  };
+
+  const handleDeleteBanner = async () => {
+    if (!deleteBannerConfirmId) return;
+    setBannerDeleting(true);
+    try {
+      const res = await adminFetch(`/admin/home-banners/${deleteBannerConfirmId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        toast({ title: "Banner deleted permanently" });
+        setDeleteBannerConfirmId(null);
+        await loadBanners();
+      } else {
+        toast({ variant: "destructive", title: "Failed to delete banner" });
+      }
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error deleting banner" });
+    } finally {
+      setBannerDeleting(false);
+    }
+  };
+
+  const handleBannerDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = banners.findIndex((b) => b.id === active.id);
+    const newIndex = banners.findIndex((b) => b.id === over.id);
+    const reordered = arrayMove(banners, oldIndex, newIndex);
+
+    setBanners(reordered);
+
+    try {
+      await adminFetch("/admin/home-banners/reorder", {
+        method: "PATCH",
+        body: JSON.stringify({
+          items: reordered.map((b, idx) => ({ id: b.id, sortOrder: idx })),
+        }),
+      });
+      toast({ title: "Banner order saved" });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Failed to save banner order" });
+      loadBanners();
+    }
+  };
+
 
   const navItems: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
     { id: "overview", label: "Dashboard", icon: LayoutDashboard },
@@ -2165,31 +2384,29 @@ export default function AdminDashboard() {
                       <form onSubmit={handleSubmitProduct} className="space-y-4">
                         <div><AdminLabel>Nighty Name *</AdminLabel><AdminInput value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} placeholder="Kerala Cotton Kasavu Nighty" required /></div>
 
-                        <div>
-                          <AdminLabel>Product Images (min 3, max 30)</AdminLabel>
-                          <ImageUploader
-                            key={JSON.stringify(productImages.length === 0)}
-                            initialObjectPaths={productImages.length > 0 ? productImages : []}
-                            onChange={setProductImages}
-                            adminToken={localStorage.getItem("adminToken") ?? ""}
-                          />
-                          {productImages.length > 0 && productImages.length < 3 && (
-                            <p className="text-xs text-orange-500 mt-1.5">⚠ Add at least {3 - productImages.length} more image{3 - productImages.length !== 1 ? "s" : ""} before saving.</p>
-                          )}
-                        </div>
-
-
-                        <div>
-                          <AdminLabel>Overall Stock (Auto-calculated) *</AdminLabel>
-                          <AdminInput type="number" min="0" step="1" value={form.stock} onChange={() => { }} error={formErrors.stock} placeholder="0" required />
-                          <p className="text-[10px] text-rose-400 mt-1 uppercase tracking-tighter">Matches sum of sizes below</p>
-                        </div>
-
                         <ProductVariations
                           inventory={form.inventory}
                           onChange={(inv) => setForm(f => ({ ...f, inventory: inv }))}
                           error={formErrors.sizes}
                         />
+
+                        <div>
+                          <ProductMediaManager
+                            media={newProductMedia}
+                            inventory={form.inventory}
+                            onChange={(updatedMedia, pendingFiles) => {
+                              setNewProductMedia(updatedMedia);
+                              if (pendingFiles) setPendingNewMediaFiles(pendingFiles);
+                            }}
+                            adminToken={localStorage.getItem("adminToken") ?? ""}
+                          />
+                        </div>
+
+                        <div>
+                          <AdminLabel>Overall Stock (Auto-calculated) *</AdminLabel>
+                          <AdminInput type="number" min="0" step="1" value={form.stock} onChange={() => { }} error={formErrors.stock} placeholder="0" required />
+                          <p className="text-[10px] text-rose-400 mt-1 uppercase tracking-tighter">Matches sum of sizes above</p>
+                        </div>
 
 
                         {/* Review / Rating fields */}
@@ -2334,16 +2551,16 @@ export default function AdminDashboard() {
                       <AdminInput value={editForm.name} onChange={(v) => setEditForm(f => ({ ...f, name: v }))} placeholder="Kerala Cotton Kasavu Nighty" required />
                     </div>
                     <div>
-                      <AdminLabel>Product Images (min 3, max 10)</AdminLabel>
-                      <ImageUploader
-                        key={editingProduct?.id}
-                        initialObjectPaths={editImages}
-                        onChange={setEditImages}
+                      <ProductMediaManager
+                        productId={editingProduct?.id}
+                        media={(editingProduct as any)?.media || { featuredImages: [], colorVariants: [] }}
+                        inventory={editForm.inventory}
+                        onChange={(newMedia) => {
+                          setEditingProduct((prev: any) => prev ? { ...prev, media: newMedia } : null);
+                          queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+                        }}
                         adminToken={localStorage.getItem("adminToken") ?? ""}
                       />
-                      {editImages.length > 0 && editImages.length < 3 && (
-                        <p className="text-xs text-orange-500 mt-1.5">⚠ Add at least {3 - editImages.length} more image{3 - editImages.length !== 1 ? "s" : ""}.</p>
-                      )}
                     </div>
                     <div>
                       <AdminLabel>Overall Stock (Auto-calculated) *</AdminLabel>
@@ -2571,6 +2788,218 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+
+          {/* ── HOME BANNERS ─────────────────────────── */}
+          {activeTab === "banners" && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="font-serif text-3xl font-bold text-rose-900">Home Banners</h1>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Manage promotional hero banners displayed on the storefront. Drag the ⠿ handle to reorder.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingBanner(null);
+                    setBannerModalOpen(true);
+                  }}
+                  className="bg-primary hover:bg-primary/90 text-white font-bold rounded-xl px-5 py-2.5 text-sm flex items-center gap-2 shadow-sm shrink-0"
+                >
+                  <Plus className="w-4 h-4" /> Add Banner
+                </button>
+              </div>
+
+              {bannersLoading ? (
+                <div className="flex justify-center py-16">
+                  <Loader2 className="w-7 h-7 animate-spin text-primary" />
+                </div>
+              ) : banners.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-pink-100 shadow-sm p-10 text-center">
+                  <ImageIcon className="w-10 h-10 mx-auto text-pink-200 mb-3" />
+                  <p className="text-rose-800 font-medium text-lg">No home banners created yet</p>
+                  <p className="text-xs text-muted-foreground mt-1 mb-4">
+                    Add your first promotional hero banner to attract storefront visitors.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setEditingBanner(null);
+                      setBannerModalOpen(true);
+                    }}
+                    className="bg-primary text-white text-xs font-bold px-4 py-2 rounded-xl inline-flex items-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Banner Now
+                  </button>
+                </div>
+              ) : (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleBannerDragEnd}>
+                  <SortableContext items={banners.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-4">
+                      {banners.map((banner) => {
+                        const statusInfo = (function getStatus(b) {
+                          if (!b.isActive) return { label: "Inactive", color: "bg-slate-100 text-slate-700 border-slate-200" };
+                          const now = new Date();
+                          if (b.startsAt && new Date(b.startsAt) > now) {
+                            return { label: "Scheduled", color: "bg-blue-100 text-blue-700 border-blue-200" };
+                          }
+                          if (b.endsAt && new Date(b.endsAt) < now) {
+                            return { label: "Expired", color: "bg-amber-100 text-amber-700 border-amber-200" };
+                          }
+                          return { label: "Active", color: "bg-emerald-100 text-emerald-700 border-emerald-200 font-semibold" };
+                        })(banner);
+
+                        return (
+                          <SortableItem key={banner.id} id={banner.id}>
+                            {(dragHandleProps) => (
+                              <div className="bg-white rounded-2xl border border-pink-100 shadow-sm overflow-hidden p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 w-full md:w-auto">
+                                  <button
+                                    {...dragHandleProps}
+                                    className="cursor-grab active:cursor-grabbing p-1.5 rounded-lg text-rose-300 hover:text-rose-400 hover:bg-pink-100 shrink-0 touch-none"
+                                    title="Drag to reorder"
+                                  >
+                                    <GripVertical className="w-4 h-4" />
+                                  </button>
+
+                                  {/* Image Thumbnails */}
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <div className="relative w-20 h-12 rounded-lg overflow-hidden border border-pink-200 bg-pink-50 shadow-xs" title="Desktop Image">
+                                      <img src={resolveImageUrl(banner.desktopImageUrl)} alt={banner.title || "Desktop"} className="w-full h-full object-cover" />
+                                      <span className="absolute bottom-0.5 left-0.5 bg-black/60 text-white text-[8px] px-1 rounded">D</span>
+                                    </div>
+                                    <div className="relative w-10 h-12 rounded-lg overflow-hidden border border-pink-200 bg-pink-50 shadow-xs" title="Mobile Image">
+                                      <img src={resolveImageUrl(banner.mobileImageUrl)} alt={banner.title || "Mobile"} className="w-full h-full object-cover" />
+                                      <span className="absolute bottom-0.5 left-0.5 bg-black/60 text-white text-[8px] px-1 rounded">M</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Text Details */}
+                                  <div>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h3 className="font-serif font-bold text-rose-900 text-base">
+                                        {banner.title || "Untitled Banner"}
+                                      </h3>
+                                      <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${statusInfo.color}`}>
+                                        {statusInfo.label}
+                                      </span>
+                                      <span className="text-xs text-rose-400">Order: {banner.sortOrder}</span>
+                                    </div>
+                                    {banner.subtitle && (
+                                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{banner.subtitle}</p>
+                                    )}
+                                    {banner.ctaText && (
+                                      <p className="text-[11px] text-rose-600 font-medium mt-0.5">
+                                        CTA: {banner.ctaText} ({banner.linkType === "external" ? "External" : "Internal"}: {banner.ctaUrl || "/"})
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end border-t md:border-t-0 pt-3 md:pt-0 border-pink-50">
+                                  <button
+                                    onClick={() => {
+                                      setPreviewingBanner(banner);
+                                      setBannerPreviewModalOpen(true);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-700 bg-pink-50 hover:bg-pink-100 transition-colors flex items-center gap-1"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" /> Preview
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      setEditingBanner(banner);
+                                      setBannerModalOpen(true);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-700 bg-pink-50 hover:bg-pink-100 transition-colors flex items-center gap-1"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" /> Edit
+                                  </button>
+
+                                  <button
+                                    onClick={() => handleToggleBannerStatus(banner.id, banner.isActive)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                      banner.isActive
+                                        ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                        : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                    }`}
+                                  >
+                                    {banner.isActive ? "Disable" : "Enable"}
+                                  </button>
+
+                                  <button
+                                    onClick={() => setDeleteBannerConfirmId(banner.id)}
+                                    className="p-1.5 rounded-lg text-rose-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                    title="Delete Banner"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </SortableItem>
+                        );
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )}
+
+              {/* Form Modal */}
+              <BannerFormModal
+                open={bannerModalOpen}
+                onClose={() => {
+                  setBannerModalOpen(false);
+                  setEditingBanner(null);
+                }}
+                onSave={handleSaveBanner}
+                initialData={editingBanner}
+              />
+
+              {/* Preview Modal */}
+              <BannerPreviewModal
+                open={bannerPreviewModalOpen}
+                onClose={() => {
+                  setBannerPreviewModalOpen(false);
+                  setPreviewingBanner(null);
+                }}
+                banner={previewingBanner}
+              />
+
+              {/* Delete Confirmation Modal */}
+              <Dialog open={!!deleteBannerConfirmId} onOpenChange={(val) => !val && setDeleteBannerConfirmId(null)}>
+                <DialogContent className="max-w-md bg-white border border-pink-100 rounded-2xl p-6 shadow-xl">
+                  <DialogHeader>
+                    <DialogTitle className="text-lg font-serif font-bold text-rose-900 flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-red-500" /> Delete Home Banner?
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-rose-700/80 pt-2">
+                      Are you sure you want to permanently delete this banner? This action cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="pt-4 flex items-center justify-end gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setDeleteBannerConfirmId(null)}
+                      disabled={bannerDeleting}
+                      className="border-pink-200 text-rose-700 hover:bg-pink-50"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleDeleteBanner}
+                      disabled={bannerDeleting}
+                      className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                    >
+                      {bannerDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete Banner"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
+
 
           {/* ── COLLECTIONS ───────────────────────── */}
           {activeTab === "collections" && (
@@ -3083,30 +3512,55 @@ export default function AdminDashboard() {
                           </div>
                         ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {selectedCustomer.cartItems.map((item: any, idx: number) => (
-                              <div key={idx} className="bg-pink-50/20 border border-pink-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
-                                {item.imageUrl && (
-                                  <img
-                                    src={resolveImageUrl(item.imageUrl)}
-                                    alt={item.name || "Product"}
-                                    className="w-20 h-24 object-cover rounded-xl border border-pink-100"
-                                  />
-                                )}
-                                <div className="space-y-1 min-w-0 flex-1">
-                                  <h4 className="font-bold text-rose-900 text-sm truncate">{item.name}</h4>
-                                  <p className="text-[11px] font-semibold text-rose-400">
-                                    BASE: <span className="text-rose-700">{item.selectedSize || "Standard"}</span> • QTY: <span className="text-rose-700">{item.quantity || 1}</span>
-                                  </p>
-                                  <div className="bg-white rounded-lg p-2 border border-pink-100 text-[10px] space-y-0.5">
-                                    <p className="font-bold text-rose-500 uppercase tracking-widest">BESPOKE MEASUREMENTS</p>
-                                    <p className="text-rose-800">Type: <span className="font-bold text-emerald-700">{item.selectedColor || "Standard"}</span></p>
+                            {selectedCustomer.cartItems.map((item: any, idx: number) => {
+                              const cartProdId = item.productId || item.id;
+                              const cartProdUrl = cartProdId ? `/product/${cartProdId}` : null;
+                              return (
+                                <div key={idx} className="bg-pink-50/20 border border-pink-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
+                                  {item.imageUrl && (
+                                    cartProdUrl ? (
+                                      <a href={cartProdUrl} target="_blank" rel="noopener noreferrer" className="block hover:opacity-85 transition-opacity">
+                                        <img
+                                          src={resolveImageUrl(item.imageUrl)}
+                                          alt={item.name || "Product"}
+                                          className="w-20 h-24 object-cover rounded-xl border border-pink-100"
+                                        />
+                                      </a>
+                                    ) : (
+                                      <img
+                                        src={resolveImageUrl(item.imageUrl)}
+                                        alt={item.name || "Product"}
+                                        className="w-20 h-24 object-cover rounded-xl border border-pink-100"
+                                      />
+                                    )
+                                  )}
+                                  <div className="space-y-1 min-w-0 flex-1">
+                                    {cartProdUrl ? (
+                                      <a
+                                        href={cartProdUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-bold text-rose-900 text-sm truncate block hover:text-primary hover:underline transition-colors"
+                                      >
+                                        {item.name}
+                                      </a>
+                                    ) : (
+                                      <h4 className="font-bold text-rose-900 text-sm truncate">{item.name}</h4>
+                                    )}
+                                    <p className="text-[11px] font-semibold text-rose-400">
+                                      BASE: <span className="text-rose-700">{item.selectedSize || "Standard"}</span> • QTY: <span className="text-rose-700">{item.quantity || 1}</span>
+                                    </p>
+                                    <div className="bg-white rounded-lg p-2 border border-pink-100 text-[10px] space-y-0.5">
+                                      <p className="font-bold text-rose-500 uppercase tracking-widest">BESPOKE MEASUREMENTS</p>
+                                      <p className="text-rose-800">Type: <span className="font-bold text-emerald-700">{item.selectedColor || "Standard"}</span></p>
+                                    </div>
+                                    <p className="text-sm font-bold text-rose-900 pt-1 font-serif">
+                                      ₹{parseFloat(item.price || 0).toLocaleString("en-IN")}
+                                    </p>
                                   </div>
-                                  <p className="text-sm font-bold text-rose-900 pt-1 font-serif">
-                                    ₹{parseFloat(item.price || 0).toLocaleString("en-IN")}
-                                  </p>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </div>

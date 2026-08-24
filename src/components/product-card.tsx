@@ -135,13 +135,32 @@ export function ProductCard({ product, index }: ProductCardProps) {
   const { discountPct } = computePricing(inventory, product.price, productMrp);
   const rating = parseFloat((product as unknown as { rating?: string }).rating ?? "4.3");
   const reviewCount = Math.max(1, (product as unknown as { reviewCount?: number }).reviewCount ?? 10);
+  const media = (product as any)?.media;
+  let cardImages: string[] = [];
+
+  if (media && typeof media === "object") {
+    if (Array.isArray(media.featuredImages) && media.featuredImages.length > 0) {
+      cardImages = media.featuredImages.map((img: any) => img.urls?.card || img.urls?.gallery).filter(Boolean);
+    } else if (Array.isArray(media.colorVariants) && media.colorVariants.length > 0) {
+      for (const cv of media.colorVariants) {
+        if (Array.isArray(cv.images)) {
+          for (const img of cv.images) {
+            if (img.urls?.card || img.urls?.gallery) {
+              cardImages.push(img.urls?.card || img.urls?.gallery);
+            }
+          }
+        }
+      }
+    }
+  }
+
   const rawImages = (product as unknown as { images?: unknown }).images;
   const images: string[] = Array.isArray(rawImages) 
     ? rawImages 
     : typeof rawImages === "string" 
     ? (() => { try { const p = JSON.parse(rawImages); return Array.isArray(p) ? p : []; } catch { return []; } })()
     : [];
-  const displayImages = images.length > 0 ? images : (product.imageUrl ? [product.imageUrl] : []);
+  const displayImages = cardImages.length > 0 ? cardImages : (images.length > 0 ? images : (product.imageUrl ? [product.imageUrl] : []));
 
   const isOutOfStock = variants.length > 0 
     ? variants.every(v => v.qty === 0) 
@@ -162,6 +181,19 @@ export function ProductCard({ product, index }: ProductCardProps) {
   const selectedVariant = variants.find(v => v.size === selectedSize && v.color === selectedColor);
   const availableStock = selectedVariant ? selectedVariant.qty : 0;
 
+  const getModalImage = (color?: string | null) => {
+    if (color && media && typeof media === "object") {
+      const cv = media.colorVariants?.find(
+        (c: any) => c.color?.toLowerCase().trim() === color.toLowerCase().trim()
+      );
+      if (cv && Array.isArray(cv.images) && cv.images.length > 0) {
+        const colorImg = cv.images[0]?.urls?.card || cv.images[0]?.urls?.gallery;
+        if (colorImg) return colorImg;
+      }
+    }
+    return displayImages[0] ?? "";
+  };
+
   const handleDone = () => {
     if (!selectedSize || !selectedColor) {
       toast({ variant: "destructive", title: "Selection Required", description: "Please pick a size and color." });
@@ -170,13 +202,15 @@ export function ProductCard({ product, index }: ProductCardProps) {
 
     if (!selectedVariant) return;
 
+    const modalImg = getModalImage(selectedColor);
+
     addItem(
       {
         id: product.id,
         name: product.name,
         price: parseFloat(selectedVariant.price),
         mrp: parseFloat(selectedVariant.mrp),
-        imageUrl: resolveImageUrl(displayImages[0] ?? ""),
+        imageUrl: resolveImageUrl(modalImg),
         stock: selectedVariant.qty,
         size: selectedSize,
         color: selectedColor,
@@ -280,9 +314,9 @@ export function ProductCard({ product, index }: ProductCardProps) {
               </button>
               
               <img 
-                src={resolveImageUrl(displayImages[0] ?? "")} 
+                src={resolveImageUrl(getModalImage(selectedColor))} 
                 alt={product.name}
-                className="w-16 h-20 object-cover rounded-lg bg-pink-50"
+                className="w-16 h-20 object-cover rounded-lg bg-pink-50 transition-all duration-200"
               />
               
               <div className="flex-1 pr-8">

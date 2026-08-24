@@ -1,229 +1,214 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
-import "react-image-crop/dist/ReactCrop.css";
-import {
-  Upload, X, Crop as CropIcon, Check, AlertCircle,
-  Loader2, ImageIcon, Eye, Link as LinkIcon, FileImage,
-} from "lucide-react";
-
-const MIN_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB
-const MIN_IMAGES = 3;
-const MAX_IMAGES = 30;
-const CROP_ASPECT = 1; // 1:1 square
-const MIN_OUTPUT_PX = 1080; // HD minimum
-
+import { useState, useEffect, useRef } from "react";
+import { Upload, X, Check, AlertCircle, Loader2, Image as ImageIcon } from "lucide-react";
 import { getApiBase } from "@/lib/api-config";
 
 const apiBase = getApiBase;
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
-/* ── Types ─────────────────────────────────────────────────────────── */
-interface ImageEntry {
+const MAX_IMAGES = 30;
+
+const R2_PUBLIC_URL = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "https://pub-3d4081bfb09f4b9d836da7e4edca0bf3.r2.dev").replace(/\/+$/, "");
+
+export function resolveImageUrl(path: string | null | undefined): string {
+  if (!path) return "";
+  const trimmed = path.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  const cleanKey = trimmed.replace(/^\/?(objects\/)?/, "");
+  return `${R2_PUBLIC_URL}/${cleanKey}`;
+}
+
+export interface ImageEntry {
   id: string;
-  blob?: Blob;
-  name: string;
+  file?: File;
   previewUrl: string;
-  status: "needs_crop" | "uploading" | "done" | "error" | "url";
-  progress: number;
-  objectPath?: string; // Object Storage path OR external URL
-  errorMsg?: string;
+  objectPath?: string;
 }
 
 function genId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-/* ── Upload helpers ─────────────────────────────────────────────────── */
-async function requestPresignedUrl(blob: Blob, name: string, adminToken: string) {
-  const res = await fetch(`${apiBase()}/api/storage/uploads/request-url`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
-    body: JSON.stringify({ name, size: blob.size, contentType: blob.type || "image/webp" }),
-  });
-  if (!res.ok) throw new Error("Failed to get upload URL");
-  return res.json() as Promise<{ uploadURL: string; objectPath: string }>;
-}
-
-function uploadToGCS(blob: Blob, url: string, onProgress: (p: number) => void): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", url);
-    xhr.setRequestHeader("Content-Type", blob.type || "image/webp");
-    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
-    xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`HTTP ${xhr.status}`));
-    xhr.onerror = () => reject(new Error("Network error"));
-    xhr.send(blob);
-  });
-}
-
-/* ── Canvas helpers ─────────────────────────────────────────────────── */
-/**
- * Render the cropped region onto a canvas at HD resolution (≥ MIN_OUTPUT_PX),
- * export as WebP quality=1.0, fallback to PNG (lossless).
- */
-function getCroppedBlob(imgEl: HTMLImageElement, pixelCrop: PixelCrop): Promise<Blob> {
-  const scaleX = imgEl.naturalWidth / imgEl.width;
-  const scaleY = imgEl.naturalHeight / imgEl.height;
-  const srcW = Math.round(pixelCrop.width * scaleX);
-  const srcH = Math.round(pixelCrop.height * scaleY);
-  // Output at least MIN_OUTPUT_PX; never downscale what's already larger
-  const outSize = Math.max(MIN_OUTPUT_PX, srcW, srcH);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = outSize;
-  canvas.height = outSize;
-  const ctx = canvas.getContext("2d")!;
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(
-    imgEl,
-    pixelCrop.x * scaleX, pixelCrop.y * scaleY, srcW, srcH,
-    0, 0, outSize, outSize,
-  );
-
-  return new Promise((resolve, reject) => {
-    // Try WebP at 100% quality first (no compression artifacts)
-    canvas.toBlob((b) => {
-      if (b) return resolve(b);
-      // PNG fallback (lossless)
-      canvas.toBlob((b2) => b2 ? resolve(b2) : reject(new Error("Canvas export failed")), "image/png");
-    }, "image/webp", 1.0);
-  });
-}
-
-/** Small 240px preview for the live preview panel (fast, doesn't affect final quality) */
-async function buildPreviewDataUrl(imgEl: HTMLImageElement, pixelCrop: PixelCrop): Promise<string> {
-  const scaleX = imgEl.naturalWidth / imgEl.width;
-  const scaleY = imgEl.naturalHeight / imgEl.height;
-  const canvas = document.createElement("canvas");
-  canvas.width = 240;
-  canvas.height = 240;
-  const ctx = canvas.getContext("2d")!;
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(
-    imgEl,
-    pixelCrop.x * scaleX, pixelCrop.y * scaleY,
-    pixelCrop.width * scaleX, pixelCrop.height * scaleY,
-    0, 0, 240, 240,
-  );
-  return canvas.toDataURL("image/jpeg", 0.92);
-}
-
-/* ── Public helper (used by admin-dashboard too) ─────────────────────── */
-export function resolveImageUrl(path: string): string {
-  if (!path) return "";
-  if (path.startsWith("/objects/")) return `${apiBase()}/api/storage${path}`;
-  return path;
-}
-
-/* ── Component ──────────────────────────────────────────────────────── */
 interface ImageUploaderProps {
   initialObjectPaths?: string[];
   onChange: (objectPaths: string[]) => void;
+  onFilesSelected?: (files: File[]) => void;
   adminToken: string;
 }
 
-type UploadTab = "file" | "url";
-
-export function ImageUploader({ initialObjectPaths = [], onChange, adminToken }: ImageUploaderProps) {
+export function ImageUploader({
+  initialObjectPaths = [],
+  onChange,
+  onFilesSelected,
+  adminToken,
+}: ImageUploaderProps) {
   const [entries, setEntries] = useState<ImageEntry[]>(() =>
     initialObjectPaths.map((op) => ({
-      id: genId(), name: op, previewUrl: resolveImageUrl(op),
-      status: "url" as const, progress: 100, objectPath: op,
-    })),
+      id: genId(),
+      previewUrl: resolveImageUrl(op),
+      objectPath: op,
+    }))
   );
 
-  const [urlInput, setUrlInput] = useState("");
-  const [urlError, setUrlError] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /* Notify parent whenever "done" list changes */
-  const doneObjectPaths = entries
-    .filter((e) => (e.status === "done" || e.status === "url") && e.objectPath)
-    .map((e) => e.objectPath!);
+  /* Notify parent whenever list changes */
+  useEffect(() => {
+    const donePaths = entries
+      .map((e) => e.objectPath || e.previewUrl)
+      .filter(Boolean);
+    onChange(donePaths);
 
-  useEffect(() => { onChange(doneObjectPaths); }, [JSON.stringify(doneObjectPaths)]);
+    const files = entries.map((e) => e.file).filter((f): f is File => !!f);
+    if (onFilesSelected) {
+      onFilesSelected(files);
+    }
+  }, [entries]);
 
-  /* ── URL input flow ─────────────────────────────────────────────────── */
-  const addImageUrl = () => {
-    setUrlError("");
-    const url = urlInput.trim();
-    if (!url) { setUrlError("Please enter an image URL."); return; }
-    if (!/^https?:\/\//i.test(url)) { setUrlError("URL must start with http:// or https://"); return; }
-    if (entries.length >= MAX_IMAGES) { setUrlError("Maximum images reached."); return; }
-    const id = genId();
-    setEntries((prev) => [...prev, {
-      id, name: url, previewUrl: url,
-      status: "url" as const, progress: 100, objectPath: url,
-    }]);
-    setUrlInput("");
+  const handleFiles = (files: FileList | File[]) => {
+    setErrorMsg(null);
+    const fileArray = Array.from(files);
+
+    if (entries.length + fileArray.length > MAX_IMAGES) {
+      setErrorMsg(`Maximum limit of ${MAX_IMAGES} images reached.`);
+      return;
+    }
+
+    const validNewEntries: ImageEntry[] = [];
+
+    for (const file of fileArray) {
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        setErrorMsg(`File '${file.name}' exceeds maximum 5 MB upload size limit.`);
+        continue;
+      }
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        setErrorMsg(`File '${file.name}' format is unsupported. Please use JPEG, PNG, or WebP.`);
+        continue;
+      }
+
+      const previewUrl = URL.createObjectURL(file);
+      validNewEntries.push({
+        id: genId(),
+        file,
+        previewUrl,
+        objectPath: previewUrl,
+      });
+    }
+
+    if (validNewEntries.length > 0) {
+      setEntries((prev) => [...prev, ...validNewEntries]);
+    }
   };
 
   const handleRemove = (id: string) => {
     setEntries((prev) => {
       const e = prev.find((x) => x.id === id);
-      if (e?.previewUrl.startsWith("blob:")) URL.revokeObjectURL(e.previewUrl);
+      if (e?.previewUrl && e.previewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(e.previewUrl);
+      }
       return prev.filter((x) => x.id !== id);
     });
   };
 
-  /* ── Derived state ──────────────────────────────────────────────────── */
-  const doneCount = entries.filter((e) => e.status === "done" || e.status === "url").length;
   const canAddMore = entries.length < MAX_IMAGES;
 
   return (
     <div className="space-y-3">
-      {/* ── URL input ──────────────────────────────────────────────── */}
+      {/* ── Drag & Drop / File Input Box ────────────────────────────── */}
       {canAddMore && (
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <input
-              type="url"
-              value={urlInput}
-              onChange={(e) => { setUrlInput(e.target.value); setUrlError(""); }}
-              onKeyDown={(e) => e.key === "Enter" && addImageUrl()}
-              placeholder="https://example.com/image.jpg"
-              className="flex-1 border border-pink-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 bg-pink-50/30"
-            />
-            <button
-              type="button"
-              onClick={addImageUrl}
-              className="bg-primary hover:bg-primary/90 text-white text-xs font-bold px-4 rounded-xl transition-colors shrink-0"
-            >
-              Add
-            </button>
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            if (e.dataTransfer.files?.length) {
+              handleFiles(e.dataTransfer.files);
+            }
+          }}
+          onClick={() => fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 ${
+            isDragging
+              ? "border-primary bg-rose-50/80 ring-2 ring-primary/20"
+              : "border-pink-200 bg-pink-50/40 hover:bg-pink-50/80 hover:border-primary/50"
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files?.length) {
+                handleFiles(e.target.files);
+              }
+              e.target.value = "";
+            }}
+          />
+
+          <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center text-primary mb-1">
+            <Upload className="w-5 h-5" />
           </div>
-          {urlError && (
-            <p className="text-xs text-red-600 flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5" /> {urlError}
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Paste a direct image URL (CDN, Unsplash, etc.).
+
+          <p className="text-xs font-bold text-rose-900">
+            Click to upload images from your computer
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            or drag & drop JPEG, PNG, or WebP files here (Max 5 MB per file)
           </p>
         </div>
       )}
 
-      {/* ── Thumbnail grid ──────────────────────────────────────────── */}
+      {errorMsg && (
+        <p className="text-xs text-red-600 flex items-center gap-1 font-medium bg-red-50 p-2 rounded-lg border border-red-200">
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+          {errorMsg}
+        </p>
+      )}
+
+      {/* ── Thumbnail Grid ──────────────────────────────────────────── */}
       {entries.length > 0 && (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 pt-1">
           {entries.map((entry, idx) => (
-            <div key={entry.id} className="relative rounded-xl overflow-hidden border border-pink-100 bg-pink-50 aspect-square group">
+            <div
+              key={entry.id}
+              className="relative rounded-xl overflow-hidden border border-pink-200 bg-pink-50 aspect-square group shadow-sm"
+            >
               <img
                 src={entry.previewUrl}
-                alt=""
+                alt={`Image ${idx + 1}`}
                 className="w-full h-full object-cover"
-                style={{ imageRendering: "auto" }}
-                onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "0"; }}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.opacity = "0.3";
+                }}
               />
 
-              <div className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shadow-sm">
-                <Check className="w-3 h-3 text-white" strokeWidth={2} />
+              <div className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm">
+                <Check className="w-3 h-3 text-white" strokeWidth={2.5} />
               </div>
 
-              <button type="button" onClick={(e) => { e.stopPropagation(); handleRemove(entry.id); }} className="absolute top-1.5 right-1.5 w-5 h-5 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemove(entry.id);
+                }}
+                className="absolute top-1.5 right-1.5 w-5 h-5 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors shadow-sm"
+              >
                 <X className="w-3 h-3" />
               </button>
-              <span className="absolute bottom-1.5 right-1.5 min-w-[18px] h-[18px] bg-black/50 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+
+              <span className="absolute bottom-1.5 right-1.5 min-w-[18px] h-[18px] bg-black/60 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
                 {idx + 1}
               </span>
             </div>
@@ -231,10 +216,10 @@ export function ImageUploader({ initialObjectPaths = [], onChange, adminToken }:
         </div>
       )}
 
-      {/* ── Progress indicator ──────────────────────────────────────── */}
-      <div className="flex items-center gap-2">
-        <span className={`text-xs font-medium ${doneCount >= MIN_IMAGES ? "text-green-600" : "text-orange-500"}`}>
-          {doneCount}/{MIN_IMAGES} required · {doneCount}/{MAX_IMAGES} added
+      {/* ── Counter ──────────────────────────────────────────── */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span className={entries.length >= 3 ? "text-emerald-600 font-semibold" : "text-amber-600 font-semibold"}>
+          {entries.length} / 3 min required · {entries.length} / {MAX_IMAGES} added
         </span>
       </div>
     </div>

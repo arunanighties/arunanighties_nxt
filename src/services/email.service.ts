@@ -29,6 +29,14 @@ export interface OrderData {
   shippingDetails?: any;
 }
 
+export interface UserData {
+  id: number | string;
+  phone?: string | null;
+  email?: string | null;
+  name?: string | null;
+  createdAt?: string | Date | null;
+}
+
 function getTransporter() {
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
   const port = parseInt(process.env.SMTP_PORT || "587", 10);
@@ -334,6 +342,95 @@ export async function sendOrderDeliveredEmail(order: OrderData): Promise<boolean
     return true;
   } catch (error: any) {
     logger.error({ orderId: order.id, error: error.message }, "[EmailService] Failed to send order delivered email to admin.");
+    return false;
+  }
+}
+
+/**
+ * Generates HTML template for New Customer Registration email notification
+ */
+function buildCustomerRegisteredHtml(user: UserData): string {
+  const regDate = user.createdAt ? new Date(user.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+
+  return `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <title>New Customer Registered - #${user.id}</title>
+  </head>
+  <body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; color: #333333;">
+    <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+      <!-- Header -->
+      <tr>
+        <td style="background-color: #0284c7; padding: 20px 30px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold;">Aruna Nighties</h1>
+          <p style="color: #e0f2fe; margin: 5px 0 0 0; font-size: 14px;">👤 New Customer Registration</p>
+        </td>
+      </tr>
+
+      <!-- Body -->
+      <tr>
+        <td style="padding: 30px;">
+          <h2 style="font-size: 18px; margin-top: 0; color: #111827;">Customer #${user.id} Details</h2>
+          <p style="font-size: 14px; color: #6b7280; margin-bottom: 20px;">Registered on ${regDate}</p>
+
+          <!-- User Info -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 20px; background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 15px;">
+            <tr>
+              <td style="font-size: 14px; line-height: 1.8; color: #0369a1;">
+                <strong>Customer ID:</strong> #${user.id}<br/>
+                <strong>Phone Number:</strong> ${user.phone || "N/A"}<br/>
+                <strong>Name:</strong> ${user.name || "Not provided yet"}<br/>
+                <strong>Email:</strong> ${user.email || "Not provided yet"}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Footer -->
+      <tr>
+        <td style="background-color: #f9fafb; padding: 15px 30px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb;">
+          This is an automated notification from Aruna Nighties System.
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+  `;
+}
+
+/**
+ * Sends an email notification to Admin when a new customer registers.
+ */
+export async function sendCustomerRegisteredEmail(user: UserData): Promise<boolean> {
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) {
+    logger.warn({ userId: user.id }, "[EmailService] ADMIN_EMAIL is not configured in .env. Customer registered email skipped.");
+    return false;
+  }
+
+  const transporter = getTransporter();
+  if (!transporter) {
+    logger.warn({ userId: user.id }, "[EmailService] SMTP credentials (SMTP_USER / SMTP_PASS) not configured in .env. Customer registered email skipped.");
+    return false;
+  }
+
+  const fromField = process.env.SMTP_FROM || `Aruna Nighties <${process.env.SMTP_USER}>`;
+
+  try {
+    const htmlContent = buildCustomerRegisteredHtml(user);
+    await transporter.sendMail({
+      from: fromField,
+      to: adminEmail,
+      subject: `[Aruna Nighties] New Customer Registered (${user.phone || "#" + user.id})`,
+      html: htmlContent,
+    });
+    logger.info({ userId: user.id, recipient: adminEmail }, "[EmailService] Customer registered email sent successfully to admin.");
+    return true;
+  } catch (error: any) {
+    logger.error({ userId: user.id, error: error.message }, "[EmailService] Failed to send customer registered email to admin.");
     return false;
   }
 }

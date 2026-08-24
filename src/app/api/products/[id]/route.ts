@@ -150,6 +150,40 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (!existing) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
+
+    // Clean up media files from Cloudflare R2 bucket
+    if (existing.media && typeof existing.media === "object") {
+      try {
+        const { r2StorageService } = await import("@/lib/storage/r2");
+        const media = existing.media as any;
+        const allUrls: string[] = [];
+
+        if (Array.isArray(media.featuredImages)) {
+          for (const img of media.featuredImages) {
+            if (img?.urls) allUrls.push(img.urls.card, img.urls.gallery, img.urls.original);
+          }
+        }
+        if (Array.isArray(media.colorVariants)) {
+          for (const cv of media.colorVariants) {
+            if (Array.isArray(cv.images)) {
+              for (const img of cv.images) {
+                if (img?.urls) allUrls.push(img.urls.card, img.urls.gallery, img.urls.original);
+              }
+            }
+          }
+        }
+
+        for (const u of allUrls.filter(Boolean)) {
+          try {
+            const key = u.startsWith("http") ? new URL(u).pathname.replace(/^\/+/, "") : u.replace(/^\/+/, "");
+            if (key) await r2StorageService.delete(key);
+          } catch {}
+        }
+      } catch (err) {
+        console.warn("R2 cleanup warning during product deletion:", err);
+      }
+    }
+
     await db.delete(productsTable).where(eq(productsTable.id, id));
     return new Response(null, { status: 204 });
   } catch (error: any) {
