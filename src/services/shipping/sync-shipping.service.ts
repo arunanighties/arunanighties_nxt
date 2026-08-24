@@ -2,6 +2,7 @@ import { db, ordersTable } from "@/db";
 import { and, isNotNull, notInArray, eq } from "drizzle-orm";
 import { trackShipment } from "./index";
 import { logger } from "@/lib/serverLogger";
+import { NotificationService } from "@/services/notification.service";
 
 /**
  * Numeric status hierarchy used to prevent status downgrades.
@@ -213,6 +214,10 @@ export async function syncShippingStatuses(options?: { batchLimit?: number }): P
             .update(ordersTable)
             .set({ status: mappedStatus })
             .where(eq(ordersTable.id, order.id));
+
+          if (["delivered", "DELIVERED", "completed", "COMPLETED"].includes(mappedStatus)) {
+            NotificationService.notifyOrderDelivered({ ...order, status: mappedStatus });
+          }
 
           updatedCount++;
           details.push({

@@ -3,6 +3,7 @@ import { db, ordersTable, productsTable } from "@/db";
 import { eq, desc } from "drizzle-orm";
 import { isAdminAuthorized } from "@/lib/adminAuth";
 import { logger } from "@/lib/serverLogger";
+import { NotificationService } from "@/services/notification.service";
 
 async function tryDecrementStock(tx: any, prodId: number, qtyOrdered: number, size?: string, color?: string): Promise<number> {
   const [product] = await tx
@@ -159,6 +160,8 @@ export async function POST(request: NextRequest) {
 
         return newOrder;
       });
+
+      NotificationService.notifyOrderPlaced(order);
 
       return NextResponse.json(order, { status: 201 });
     } catch (txErr: any) {

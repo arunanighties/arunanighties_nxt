@@ -5,6 +5,7 @@ import { restoreOrderStock, VALID_STATUSES } from "@/lib/orderHelpers";
 import { generateShipment } from "@/services/shipping";
 import { logger } from "@/lib/serverLogger";
 import { isAdminAuthorized } from "@/lib/adminAuth";
+import { NotificationService } from "@/services/notification.service";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -70,10 +71,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           logger.info({ orderId: id }, "Generating AWB...");
           const items = typeof existing.items === "string" ? JSON.parse(existing.items) : (existing.items ?? []);
           const shipmentResult = await generateShipment(existing, items, packageDetails);
-          
+
           if (shipmentResult && typeof shipmentResult === "object" && shipmentResult.awb_number) {
             awbNumber = shipmentResult.awb_number;
-            
+
             let currentDetails = {};
             try {
               if (typeof finalShippingDetails === "string") {
@@ -94,7 +95,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           } else {
             awbNumber = typeof shipmentResult === "string" ? shipmentResult : shipmentResult?.awb_number || awbNumber;
           }
-          
+
           logger.info({ orderId: id, awb: awbNumber }, "AWB generated successfully");
         } catch (awbError: any) {
           logger.error({ orderId: id, error: awbError.message }, "AWB generation failed");
@@ -115,6 +116,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       .where(eq(ordersTable.id, id));
 
     const [updated] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+
+    const isNowDelivered = ["delivered", "completed"].includes(String(status).toLowerCase());
+    const wasAlreadyDelivered = ["delivered", "completed"].includes(String(existing.status).toLowerCase());
+    if (isNowDelivered && !wasAlreadyDelivered) {
+      NotificationService.notifyOrderDelivered(updated);
+    }
+
     return NextResponse.json(updated);
   } catch (error: any) {
     logger.error({ orderId: (await params).id, error: error.message }, "Failed to update order status");

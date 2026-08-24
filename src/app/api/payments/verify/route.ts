@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { db, ordersTable, productsTable } from "@/db";
 import { eq } from "drizzle-orm";
+import { NotificationService } from "@/services/notification.service";
 
 async function tryDecrementStock(tx: any, prodId: number, qtyOrdered: number, size?: string, color?: string): Promise<number> {
   const [product] = await tx
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
       const itemsStr = typeof items === "string" ? items : JSON.stringify(items ?? []);
       const parsedUserId = userId ? parseInt(String(userId), 10) : null;
 
-      const resultId = await db.transaction(async (tx) => {
+      const createdOrder = await db.transaction(async (tx) => {
         const orderItemsArray = Array.isArray(items) ? items : JSON.parse(itemsStr);
         const updatedItemsArray: any[] = [];
 
@@ -151,13 +152,15 @@ export async function POST(request: NextRequest) {
           })
           .returning();
 
-        return newOrder.id;
+        return newOrder;
       });
 
-      return NextResponse.json({ 
-        success: true, 
-        message: "Payment verified and order created", 
-        orderId: resultId 
+      NotificationService.notifyOrderPlaced(createdOrder);
+
+      return NextResponse.json({
+        success: true,
+        message: "Payment verified and order created",
+        orderId: createdOrder.id
       });
     } else {
       return NextResponse.json({ success: false, error: "Invalid signature" }, { status: 400 });
