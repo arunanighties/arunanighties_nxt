@@ -12,14 +12,14 @@ const ADMIN_PHONES = (process.env.ADMIN_PHONES || process.env.ADMIN_PHONE || "97
 export async function POST(request: NextRequest) {
   try {
     const { firebaseIdToken } = await request.json();
-    
+
     if (!firebaseIdToken) {
       return NextResponse.json({ error: "firebaseIdToken is required." }, { status: 400 });
     }
 
     const decodedToken = await firebaseAdminAuth.verifyIdToken(firebaseIdToken);
     const phoneWithCountry = decodedToken.phone_number;
-    
+
     if (!phoneWithCountry) {
       return NextResponse.json({ error: "Phone number not found in Firebase token." }, { status: 400 });
     }
@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
     let user = existingUsers[0];
 
     if (!user) {
-      const [newUser] = await db.insert(usersTable).values({ 
-        phone, 
+      const [newUser] = await db.insert(usersTable).values({
+        phone,
         email: null,
         name: null
       }).returning();
@@ -45,10 +45,10 @@ export async function POST(request: NextRequest) {
     }
 
     const token = generateUserToken(user.id);
-    return NextResponse.json({ 
-      success: true, 
-      token, 
-      user, 
+    return NextResponse.json({
+      success: true,
+      token,
+      user,
       isAdmin: false,
       isNew: !existingUsers[0]
     });
