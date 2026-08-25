@@ -90,7 +90,7 @@ export default function Home() {
   const hasSections = sections.length > 0;
 
   const staticHeroFallback = (
-    <section className="relative w-full min-h-[560px] flex items-center overflow-hidden bg-gradient-to-br from-pink-100 via-rose-50 to-pink-200">
+    <section className="relative w-full min-h-[460px] md:min-h-[560px] lg:min-h-[640px] xl:min-h-[700px] flex items-center overflow-hidden bg-gradient-to-br from-pink-100 via-rose-50 to-pink-200">
       <div className="absolute -top-24 -right-24 w-96 h-96 bg-pink-300/30 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-16 -left-16 w-72 h-72 bg-rose-200/40 rounded-full blur-2xl pointer-events-none" />
 

@@ -50,7 +50,7 @@ export function HomeBannerCarousel({ fallback }: { fallback?: React.ReactNode })
 
   if (isLoading) {
     return (
-      <section className="relative w-full h-[520px] bg-rose-50 animate-pulse flex items-center justify-center">
+      <section className="relative w-full h-[460px] md:h-[560px] lg:h-[640px] xl:h-[700px] bg-rose-50 animate-pulse flex items-center justify-center">
         <div className="w-12 h-12 rounded-full border-4 border-pink-200 border-t-primary animate-spin" />
       </section>
     );
@@ -93,7 +93,7 @@ export function HomeBannerCarousel({ fallback }: { fallback?: React.ReactNode })
       onFocus={() => setIsPaused(true)}
       onBlur={() => setIsPaused(false)}
       aria-label="Promotional Hero Banners Carousel"
-      className="relative w-full overflow-hidden bg-rose-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[480px] md:min-h-[560px] flex items-center"
+      className="relative w-full overflow-hidden bg-rose-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[460px] md:min-h-[560px] lg:min-h-[640px] xl:min-h-[700px] 2xl:min-h-[750px] flex items-center"
     >
       <AnimatePresence initial={false} custom={direction} mode="wait">
         <motion.div
@@ -120,7 +120,7 @@ export function HomeBannerCarousel({ fallback }: { fallback?: React.ReactNode })
 
           {/* Slide Text Content Container */}
           <div className="container mx-auto px-4 md:px-8 relative z-10 h-full flex items-center">
-            <div className="max-w-xl py-12 md:py-20 text-white space-y-4 animate-in fade-in slide-in-from-left-6 duration-500">
+            <div className="max-w-xl py-12 md:py-20 lg:py-28 text-white space-y-4 md:space-y-6 animate-in fade-in slide-in-from-left-6 duration-500">
               {current.title && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/25 text-rose-200 border border-rose-400/30 text-xs font-semibold uppercase tracking-wider">
                   <Sparkles className="w-3.5 h-3.5" /> Special Offer
