@@ -19,6 +19,67 @@ export function resolveImageUrl(path: string | null | undefined): string {
   return `${R2_PUBLIC_URL}/${cleanKey}`;
 }
 
+export function getProductFirstImage(product: any): string | null {
+  if (!product) return null;
+
+  const extractUrl = (item: any): string | null => {
+    if (!item) return null;
+    if (typeof item === "string" && item.trim().length > 0) return item.trim();
+    if (typeof item === "object") {
+      const u = item.urls?.card || item.urls?.gallery || item.urls?.original || item.url;
+      if (typeof u === "string" && u.trim().length > 0) return u.trim();
+    }
+    return null;
+  };
+
+  // 1. Check media (featuredImages first, then colorVariants)
+  let media = product.media;
+  if (typeof media === "string" && media.trim().length > 0) {
+    try { media = JSON.parse(media); } catch { media = null; }
+  }
+
+  if (media && typeof media === "object") {
+    // Check featuredImages first
+    if (Array.isArray(media.featuredImages) && media.featuredImages.length > 0) {
+      for (const img of media.featuredImages) {
+        const url = extractUrl(img);
+        if (url) return url;
+      }
+    }
+
+    // Check colorVariants next
+    if (Array.isArray(media.colorVariants) && media.colorVariants.length > 0) {
+      for (const cv of media.colorVariants) {
+        if (Array.isArray(cv?.images) && cv.images.length > 0) {
+          for (const img of cv.images) {
+            const url = extractUrl(img);
+            if (url) return url;
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Check direct imageUrl property on product
+  if (typeof product.imageUrl === "string" && product.imageUrl.trim().length > 0) {
+    return product.imageUrl.trim();
+  }
+
+  // 3. Check images array property on product
+  let images = product.images;
+  if (typeof images === "string" && images.trim().length > 0) {
+    try { images = JSON.parse(images); } catch { images = []; }
+  }
+  if (Array.isArray(images) && images.length > 0) {
+    for (const img of images) {
+      const url = extractUrl(img);
+      if (url) return url;
+    }
+  }
+
+  return null;
+}
+
 export interface ImageEntry {
   id: string;
   file?: File;

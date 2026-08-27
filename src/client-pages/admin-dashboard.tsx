@@ -4,7 +4,7 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { parseTrackingData } from "../utils/tracking";
 import { TrackingTimelineModal } from "../components/orders/TrackingTimelineModal";
 import { useAdminMe, useAdminLogout, useListProducts, useCreateProduct, useDeleteProduct, usePatchProduct } from "@workspace/api-client-react";
-import { ImageUploader, resolveImageUrl } from "@/components/admin/image-uploader";
+import { ImageUploader, resolveImageUrl, getProductFirstImage } from "@/components/admin/image-uploader";
 import { ProductMediaManager, type PendingMediaFile } from "@/components/admin/product-media-manager";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -12,7 +12,7 @@ import {
   AlertTriangle, Trash2, Users, Eye, LayoutDashboard, Tag,
   Settings, Pencil, Check, X, XCircle, Menu, Layers, Star, MessageSquare, GripVertical,
   ChevronDown, ChevronUp, ChevronRight, Search, Clock, FileText, MapPin, Phone, Truck,
-  Info, Download, BarChart3, Image as ImageIcon
+  Info, Download, BarChart3, Image as ImageIcon, Sparkles
 } from "lucide-react";
 import AdminSidebar, { type Tab as SidebarTab } from "../components/admin/admin-sidebar";
 import ReportsPage from "./admin/reports";
@@ -1226,6 +1226,10 @@ export default function AdminDashboard() {
   const [newProductMedia, setNewProductMedia] = useState<any>({ featuredImages: [], colorVariants: [] });
   const [pendingNewMediaFiles, setPendingNewMediaFiles] = useState<PendingMediaFile[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState("");
+  const [currentUploadIndex, setCurrentUploadIndex] = useState(0);
+  const [totalUploadFiles, setTotalUploadFiles] = useState(0);
 
   // Product edit modal
   const [editingProduct, setEditingProduct] = useState<ProductRow | null>(null);
@@ -1405,6 +1409,46 @@ export default function AdminDashboard() {
     e.preventDefault();
     const errors: Record<string, string> = {};
     if (!form.name.trim()) errors.name = "Product name is required.";
+    if (!form.description.trim()) errors.description = "Product description is required.";
+
+    const featuredCount = (newProductMedia?.featuredImages || []).length;
+    if (featuredCount < 2) {
+      errors.featuredImages = "At least 2 featured product images are required.";
+    }
+
+    const uniqueColorNames = new Set<string>();
+    if (form.inventory && typeof form.inventory === "object") {
+      Object.values(form.inventory).forEach((colorGroup) => {
+        if (colorGroup && typeof colorGroup === "object") {
+          Object.keys(colorGroup).forEach((colorName) => {
+            if (colorName && colorName.trim()) {
+              uniqueColorNames.add(colorName.trim());
+            }
+          });
+        }
+      });
+    }
+
+    const colorNamesArr = Array.from(uniqueColorNames);
+    if (colorNamesArr.length === 0) {
+      errors.colorVariants = "Please add at least one color variation and upload at least 2 images per color.";
+    } else {
+      const missingColorImages: string[] = [];
+      colorNamesArr.forEach((colorName) => {
+        const cvObj = (newProductMedia?.colorVariants || []).find(
+          (c: any) => c.color?.toLowerCase().trim() === colorName.toLowerCase().trim()
+        );
+        const count = (cvObj?.images || []).length;
+        if (count < 2) {
+          missingColorImages.push(`${colorName} (${count}/2 images)`);
+        }
+      });
+
+      if (missingColorImages.length > 0) {
+        errors.colorVariants = `Each color variant must have at least 2 images. Missing: ${missingColorImages.join(", ")}.`;
+      }
+    }
+
     const ratingVal = parseFloat(form.rating);
     if (isNaN(ratingVal) || ratingVal < 1 || ratingVal > 5) errors.rating = "Rating must be between 1.0 and 5.0.";
     const stockVal = parseInt(form.stock, 10);
@@ -1418,6 +1462,11 @@ export default function AdminDashboard() {
 
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
     setFormErrors({});
+    setIsAddingProduct(true);
+    setUploadProgressText("Saving product details...");
+    setCurrentUploadIndex(0);
+    setTotalUploadFiles(pendingNewMediaFiles.length);
+
     const reviewCountFinal = Math.max(1, parseInt(form.reviewCount, 10) || 1);
     createProductMutation.mutate(
       {
@@ -1439,7 +1488,15 @@ export default function AdminDashboard() {
         onSuccess: async (newProduct: any) => {
           if (newProduct?.id && pendingNewMediaFiles.length > 0) {
             const token = localStorage.getItem("adminToken") || "";
-            for (const item of pendingNewMediaFiles) {
+            const total = pendingNewMediaFiles.length;
+            setTotalUploadFiles(total);
+
+            for (let i = 0; i < total; i++) {
+              const item = pendingNewMediaFiles[i];
+              setCurrentUploadIndex(i + 1);
+              const targetLabel = item.target === "featured" ? "featured image" : `${item.colorName || ""} color image`;
+              setUploadProgressText(`Uploading ${targetLabel} (${i + 1} of ${total})...`);
+
               try {
                 const formData = new FormData();
                 formData.append("file", item.file);
@@ -1456,6 +1513,8 @@ export default function AdminDashboard() {
               }
             }
           }
+
+          setUploadProgressText("Finalizing product listing...");
           toast({ title: "Product added!", description: `${form.name} is now live on the website.` });
           setForm({ name: "", description: "", stock: "0", rating: "4.3", reviewCount: "1", reviewText: "", sizes: [], inventory: {} });
           setFormErrors({});
@@ -1465,8 +1524,18 @@ export default function AdminDashboard() {
           setPendingNewMediaFiles([]);
           queryClient.invalidateQueries();
           await loadStats();
+          setIsAddingProduct(false);
+          setUploadProgressText("");
+          setCurrentUploadIndex(0);
+          setTotalUploadFiles(0);
         },
-        onError: (err) => toast({ variant: "destructive", title: "Failed to add product", description: err.message }),
+        onError: (err) => {
+          setIsAddingProduct(false);
+          setUploadProgressText("");
+          setCurrentUploadIndex(0);
+          setTotalUploadFiles(0);
+          toast({ variant: "destructive", title: "Failed to add product", description: err.message });
+        },
       }
     );
   };
@@ -2000,11 +2069,13 @@ export default function AdminDashboard() {
                         const stock = analysis.worstStock;
                         const urgency = stock === 0 ? "Out of stock" : stock === 1 ? "Critical — 1 left" : `Low — ${stock} left`;
                         const urgencyColor = stock === 0 ? "bg-red-100 text-red-700 border-red-200" : stock <= 2 ? "bg-orange-100 text-orange-700 border-orange-200" : "bg-yellow-100 text-yellow-700 border-yellow-200";
+                        const firstImg = getProductFirstImage(product);
+                        const imgSrc = firstImg ? resolveImageUrl(firstImg) : null;
                         return (
                           <div key={product.id} className="flex items-center gap-4 px-6 py-4 hover:bg-orange-50/30">
                             <div className="w-14 h-14 rounded-xl bg-orange-50 border border-orange-100 overflow-hidden flex-shrink-0">
-                              {product.imageUrl
-                                ? <img src={resolveImageUrl(product.imageUrl)} alt="" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                              {imgSrc
+                                ? <img src={imgSrc} alt="" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                                 : <Package className="w-5 h-5 text-orange-300 m-auto mt-4" />}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -2181,12 +2252,14 @@ export default function AdminDashboard() {
                                 });
                               });
 
+                              const firstImg = getProductFirstImage(p);
+                              const imgSrc = firstImg ? resolveImageUrl(firstImg) : null;
                               return (
                                 <div key={p.id} className="bg-white rounded-3xl border border-pink-50 shadow-sm overflow-hidden flex flex-col group hover:shadow-md transition-all">
                                   <div className="p-4 flex gap-4">
                                     <div className="w-24 h-24 rounded-2xl bg-pink-50 border border-pink-100 overflow-hidden shrink-0">
-                                      {p.imageUrl ? (
-                                        <img src={resolveImageUrl(p.imageUrl)} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                      {imgSrc ? (
+                                        <img src={imgSrc} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                       ) : <Package className="w-8 h-8 text-rose-200 m-auto mt-8" />}
                                     </div>
                                     <div className="flex-1 min-w-0 pt-1">
@@ -2376,71 +2449,173 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                   {/* Add form */}
                   <div className="lg:col-span-3">
-                    <div className="bg-white rounded-2xl border border-pink-100 shadow-sm p-6 sticky top-8">
+                    <div className="bg-white rounded-2xl border border-pink-100 shadow-sm p-6 sticky top-8 relative overflow-hidden">
+                      {/* Loading Animation Overlay */}
+                      {isAddingProduct && (
+                        <div className="absolute inset-0 bg-white/95 backdrop-blur-md z-50 rounded-2xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-300 border border-pink-100 shadow-xl">
+                          <div className="relative mb-5">
+                            <div className="w-16 h-16 rounded-full border-4 border-pink-100 border-t-primary animate-spin" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <Sparkles className="w-7 h-7 text-primary animate-pulse" />
+                            </div>
+                          </div>
+
+                          <h3 className="text-base font-bold text-rose-900 mb-1.5">Adding Product to Store</h3>
+                          <p className="text-xs text-rose-600 font-medium mb-4 max-w-xs leading-relaxed">{uploadProgressText || "Please wait while we publish your product..."}</p>
+
+                          {totalUploadFiles > 0 && (
+                            <div className="w-full max-w-xs space-y-2">
+                              <div className="w-full bg-pink-100 rounded-full h-2 overflow-hidden shadow-inner">
+                                <div
+                                  className="bg-primary h-full rounded-full transition-all duration-300 shadow-sm"
+                                  style={{ width: `${Math.min(100, Math.round((currentUploadIndex / totalUploadFiles) * 100))}%` }}
+                                />
+                              </div>
+                              <div className="flex justify-between text-[11px] font-bold text-rose-500">
+                                <span>Uploading Media</span>
+                                <span>{currentUploadIndex} / {totalUploadFiles} ({Math.min(100, Math.round((currentUploadIndex / totalUploadFiles) * 100))}%)</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-2 mb-5">
                         <Plus className="w-4 h-4 text-primary" />
                         <h2 className="font-semibold text-rose-900 text-sm">Add New Product</h2>
                       </div>
-                      <form onSubmit={handleSubmitProduct} className="space-y-4">
-                        <div><AdminLabel>Nighty Name *</AdminLabel><AdminInput value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} placeholder="Kerala Cotton Kasavu Nighty" required /></div>
+                      {(() => {
+                        const isFormValid = (() => {
+                          if (!form.name.trim()) return false;
+                          if (!form.description.trim()) return false;
+                          if ((newProductMedia?.featuredImages || []).length < 2) return false;
 
-                        <ProductVariations
-                          inventory={form.inventory}
-                          onChange={(inv) => setForm(f => ({ ...f, inventory: inv }))}
-                          error={formErrors.sizes}
-                        />
+                          const uniqueColors = new Set<string>();
+                          if (form.inventory && typeof form.inventory === "object") {
+                            Object.values(form.inventory).forEach((colorGroup) => {
+                              if (colorGroup && typeof colorGroup === "object") {
+                                Object.keys(colorGroup).forEach((cName) => {
+                                  if (cName && cName.trim()) uniqueColors.add(cName.trim());
+                                });
+                              }
+                            });
+                          }
+                          const colorList = Array.from(uniqueColors);
+                          if (colorList.length === 0) return false;
 
-                        <div>
-                          <ProductMediaManager
-                            media={newProductMedia}
-                            inventory={form.inventory}
-                            onChange={(updatedMedia, pendingFiles) => {
-                              setNewProductMedia(updatedMedia);
-                              if (pendingFiles) setPendingNewMediaFiles(pendingFiles);
-                            }}
-                            adminToken={localStorage.getItem("adminToken") ?? ""}
-                          />
-                        </div>
+                          const allColorsValid = colorList.every((colorName) => {
+                            const cvObj = (newProductMedia?.colorVariants || []).find(
+                              (c: any) => c.color?.toLowerCase().trim() === colorName.toLowerCase().trim()
+                            );
+                            return (cvObj?.images || []).length >= 2;
+                          });
+                          if (!allColorsValid) return false;
 
-                        <div>
-                          <AdminLabel>Overall Stock (Auto-calculated) *</AdminLabel>
-                          <AdminInput type="number" min="0" step="1" value={form.stock} onChange={() => { }} error={formErrors.stock} placeholder="0" required />
-                          <p className="text-[10px] text-rose-400 mt-1 uppercase tracking-tighter">Matches sum of sizes above</p>
-                        </div>
+                          const ratingVal = parseFloat(form.rating);
+                          if (isNaN(ratingVal) || ratingVal < 1 || ratingVal > 5) return false;
 
+                          const stockVal = parseInt(form.stock, 10);
+                          if (isNaN(stockVal) || stockVal < 0) return false;
 
-                        {/* Review / Rating fields */}
-                        <div className="border-t border-pink-100 pt-4">
-                          <p className="text-xs font-semibold text-rose-500 uppercase tracking-wider mb-3">Ratings &amp; Reviews</p>
-                          <div className="grid grid-cols-2 gap-3 mb-3">
+                          const calculatedStock = Object.keys(form.inventory).length > 0
+                            ? Object.values(form.inventory).reduce((s, colors) => s + Object.values(colors).reduce((c, val) => c + val.qty, 0), 0)
+                            : form.sizes.reduce((sum, s) => sum + (s.quantity || 0), 0);
+                          if (stockVal !== calculatedStock) return false;
+
+                          if (form.sizes.length === 0 && Object.keys(form.inventory).length === 0) return false;
+
+                          return true;
+                        })();
+
+                        return (
+                          <form onSubmit={handleSubmitProduct} className="space-y-4">
                             <div>
-                              <AdminLabel>Avg. Rating (1.0 – 5.0) *</AdminLabel>
-                              <AdminInput type="number" min="1" max="5" step="0.1" value={form.rating} onChange={(v) => { setForm(f => ({ ...f, rating: v })); setFormErrors(fe => ({ ...fe, rating: "" })); }} placeholder="4.3" error={formErrors.rating} />
+                              <AdminLabel>Nighty Name *</AdminLabel>
+                              <AdminInput
+                                value={form.name}
+                                onChange={(v) => { setForm(f => ({ ...f, name: v })); setFormErrors(fe => ({ ...fe, name: "" })); }}
+                                placeholder="Kerala Cotton Kasavu Nighty"
+                                error={formErrors.name}
+                              />
                             </div>
+
+                            <ProductVariations
+                              inventory={form.inventory}
+                              onChange={(inv) => { setForm(f => ({ ...f, inventory: inv })); setFormErrors(fe => ({ ...fe, sizes: "", colorVariants: "" })); }}
+                              error={formErrors.sizes || formErrors.colorVariants}
+                            />
+
                             <div>
-                              <AdminLabel>No. of Reviews (min 1)</AdminLabel>
-                              <AdminInput type="number" min="1" step="1" value={form.reviewCount} onChange={(v) => setForm(f => ({ ...f, reviewCount: String(Math.max(1, parseInt(v, 10) || 10)) }))} placeholder="10" />
+                              <ProductMediaManager
+                                media={newProductMedia}
+                                inventory={form.inventory}
+                                onChange={(updatedMedia, pendingFiles) => {
+                                  setNewProductMedia(updatedMedia);
+                                  if (pendingFiles) setPendingNewMediaFiles(pendingFiles);
+                                  setFormErrors(fe => ({ ...fe, featuredImages: "", colorVariants: "" }));
+                                }}
+                                adminToken={localStorage.getItem("adminToken") ?? ""}
+                              />
+                              {formErrors.featuredImages && (
+                                <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium bg-red-50 p-2.5 rounded-xl border border-red-200">
+                                  <span>⚠</span> {formErrors.featuredImages}
+                                </p>
+                              )}
+                              {formErrors.colorVariants && (
+                                <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium bg-red-50 p-2.5 rounded-xl border border-red-200">
+                                  <span>⚠</span> {formErrors.colorVariants}
+                                </p>
+                              )}
                             </div>
-                          </div>
-                          <div>
-                            <AdminLabel>Review Text</AdminLabel>
-                            <textarea rows={2} value={form.reviewText} onChange={(e) => setForm(f => ({ ...f, reviewText: e.target.value }))}
-                              placeholder="e.g. 'Very soft cotton, fits perfectly — loved it!'"
-                              className="w-full border border-pink-200 rounded-xl px-3 py-2.5 text-sm bg-pink-50 focus:outline-none focus:ring-2 focus:ring-primary/30 text-rose-900 placeholder:text-rose-300 resize-none" />
-                          </div>
-                        </div>
 
-                        <div>
-                          <AdminLabel>Description</AdminLabel>
-                          <textarea rows={3} value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Fabric, style, size details..."
-                            className="w-full border border-pink-200 rounded-xl px-3 py-2.5 text-sm bg-pink-50 focus:outline-none focus:ring-2 focus:ring-primary/30 text-rose-900 placeholder:text-rose-300 resize-none" />
-                        </div>
+                            <div>
+                              <AdminLabel>Overall Stock (Auto-calculated) *</AdminLabel>
+                              <AdminInput type="number" min="0" step="1" value={form.stock} onChange={() => { }} error={formErrors.stock} placeholder="0" />
+                              <p className="text-[10px] text-rose-400 mt-1 uppercase tracking-tighter">Matches sum of sizes above</p>
+                            </div>
 
-                        <button type="submit" disabled={createProductMutation.isPending}
-                          className="w-full bg-primary hover:bg-primary/90 disabled:bg-pink-200 text-white font-bold rounded-xl py-3 text-sm flex items-center justify-center gap-2 shadow-sm">
-                          {createProductMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" />Adding...</> : <><Plus className="w-4 h-4" />Add to Store</>}
-                        </button>
-                      </form>
+
+                            {/* Review / Rating fields */}
+                            <div className="border-t border-pink-100 pt-4">
+                              <p className="text-xs font-semibold text-rose-500 uppercase tracking-wider mb-3">Ratings &amp; Reviews</p>
+                              <div className="grid grid-cols-2 gap-3 mb-3">
+                                <div>
+                                  <AdminLabel>Avg. Rating (1.0 – 5.0) *</AdminLabel>
+                                  <AdminInput type="number" min="1" max="5" step="0.1" value={form.rating} onChange={(v) => { setForm(f => ({ ...f, rating: v })); setFormErrors(fe => ({ ...fe, rating: "" })); }} placeholder="4.3" error={formErrors.rating} />
+                                </div>
+                                <div>
+                                  <AdminLabel>No. of Reviews (min 1)</AdminLabel>
+                                  <AdminInput type="number" min="1" step="1" value={form.reviewCount} onChange={(v) => setForm(f => ({ ...f, reviewCount: String(Math.max(1, parseInt(v, 10) || 10)) }))} placeholder="10" />
+                                </div>
+                              </div>
+                              <div>
+                                <AdminLabel>Review Text</AdminLabel>
+                                <textarea rows={2} value={form.reviewText} onChange={(e) => setForm(f => ({ ...f, reviewText: e.target.value }))}
+                                  placeholder="e.g. 'Very soft cotton, fits perfectly — loved it!'"
+                                  className="w-full border border-pink-200 rounded-xl px-3 py-2.5 text-sm bg-pink-50 focus:outline-none focus:ring-2 focus:ring-primary/30 text-rose-900 placeholder:text-rose-300 resize-none" />
+                              </div>
+                            </div>
+
+                            <div>
+                              <AdminLabel>Description *</AdminLabel>
+                              <textarea rows={3} value={form.description} onChange={(e) => { setForm(f => ({ ...f, description: e.target.value })); setFormErrors(fe => ({ ...fe, description: "" })); }} placeholder="Fabric, style, size details..."
+                                className={`w-full border rounded-xl px-3 py-2.5 text-sm bg-pink-50 focus:outline-none focus:ring-2 text-rose-900 placeholder:text-rose-300 resize-none transition-colors ${formErrors.description ? "border-red-400 focus:ring-red-300/40 bg-red-50/30" : "border-pink-200 focus:ring-primary/30"}`} />
+                              {formErrors.description && (
+                                <p className="text-xs text-red-600 mt-1 flex items-center gap-1 font-medium">
+                                  <span>⚠</span> {formErrors.description}
+                                </p>
+                              )}
+                            </div>
+
+                            <button type="submit" disabled={createProductMutation.isPending || isAddingProduct || !isFormValid}
+                              className="w-full bg-primary hover:bg-primary/90 disabled:bg-pink-200/80 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-xl py-3 text-sm flex items-center justify-center gap-2 shadow-sm transition-all"
+                              title={!isFormValid ? "Please fill in all mandatory fields and upload required images to enable button." : ""}
+                            >
+                              {(createProductMutation.isPending || isAddingProduct) ? <><Loader2 className="w-4 h-4 animate-spin" />Adding Product...</> : <><Plus className="w-4 h-4" />Add to Store</>}
+                            </button>
+                          </form>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -2485,13 +2660,15 @@ export default function AdminDashboard() {
                                       }
                                     }
                                   }
-                                  const discPct = mrp > offerPrice ? Math.round(((mrp - offerPrice) / mrp) * 100) : 0;
+                                   const discPct = mrp > offerPrice ? Math.round(((mrp - offerPrice) / mrp) * 100) : 0;
                                   const p = product as typeof product & { categoryId?: number };
                                   const cat = categories.find((c) => c.id === p.categoryId);
+                                  const firstImg = getProductFirstImage(product);
+                                  const imgSrc = firstImg ? resolveImageUrl(firstImg) : null;
                                   return (
                                     <div key={product.id} className="flex items-center gap-4 px-6 py-4 hover:bg-pink-50/40 transition-colors">
                                       <div className="w-14 h-14 rounded-xl bg-pink-50 border border-pink-100 overflow-hidden flex-shrink-0">
-                                        {product.imageUrl ? <img src={resolveImageUrl(product.imageUrl)} alt="" className="w-full h-full object-cover" /> : <Package className="w-5 h-5 text-rose-300 m-auto mt-4" />}
+                                        {imgSrc ? <img src={imgSrc} alt="" className="w-full h-full object-cover" /> : <Package className="w-5 h-5 text-rose-300 m-auto mt-4" />}
                                       </div>
                                       <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-rose-900 truncate">{product.name}</p>
@@ -2724,34 +2901,38 @@ export default function AdminDashboard() {
                                   <div className="px-5 py-3 space-y-2">
                                     {section.products.length === 0 ? (
                                       <p className="text-xs text-muted-foreground py-2">No products in this collection yet.</p>
-                                    ) : section.products.map((p) => (
-                                      <div key={p.id} className="flex items-center gap-3 py-1.5 border-b border-pink-50 last:border-0">
-                                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-pink-50 shrink-0 border border-pink-100">
-                                          {p.imageUrl ? (
-                                            <img src={resolveImageUrl(p.imageUrl)} alt={p.name} className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-                                          ) : <span className="text-xl flex items-center justify-center h-full">🌸</span>}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-medium text-rose-900 truncate">{p.name}</p>
-                                          {(() => {
-                                            let offerPrice = 0;
-                                            const inv = typeof p.inventory === "string" ? JSON.parse(p.inventory) : p.inventory;
-                                            if (inv && typeof inv === "object") {
-                                              const firstSize = Object.values(inv)[0] as Record<string, any>;
-                                              if (firstSize) {
-                                                const firstColor = Object.values(firstSize)[0];
-                                                if (firstColor) offerPrice = firstColor.price || 0;
+                                    ) : section.products.map((p) => {
+                                      const firstImg = getProductFirstImage(p);
+                                      const imgSrc = firstImg ? resolveImageUrl(firstImg) : null;
+                                      return (
+                                        <div key={p.id} className="flex items-center gap-3 py-1.5 border-b border-pink-50 last:border-0">
+                                          <div className="w-8 h-8 rounded-lg overflow-hidden bg-pink-50 shrink-0 border border-pink-100">
+                                            {imgSrc ? (
+                                              <img src={imgSrc} alt={p.name} className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                                            ) : <span className="text-xl flex items-center justify-center h-full">🌸</span>}
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-rose-900 truncate">{p.name}</p>
+                                            {(() => {
+                                              let offerPrice = 0;
+                                              const inv = typeof p.inventory === "string" ? JSON.parse(p.inventory) : p.inventory;
+                                              if (inv && typeof inv === "object") {
+                                                const firstSize = Object.values(inv)[0] as Record<string, any>;
+                                                if (firstSize) {
+                                                  const firstColor = Object.values(firstSize)[0];
+                                                  if (firstColor) offerPrice = firstColor.price || 0;
+                                                }
                                               }
-                                            }
-                                            return <p className="text-xs text-muted-foreground">Starting at: ₹{offerPrice.toLocaleString("en-IN")}</p>;
-                                          })()}
+                                              return <p className="text-xs text-muted-foreground">Starting at: ₹{offerPrice.toLocaleString("en-IN")}</p>;
+                                            })()}
+                                          </div>
+                                          <button onClick={() => handleUnassignProduct(p.id)}
+                                            className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 shrink-0" title="Remove from collection">
+                                            <X className="w-3.5 h-3.5" />
+                                          </button>
                                         </div>
-                                        <button onClick={() => handleUnassignProduct(p.id)}
-                                          className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 shrink-0" title="Remove from collection">
-                                          <X className="w-3.5 h-3.5" />
-                                        </button>
-                                      </div>
-                                    ))}
+                                      );
+                                    })}
                                   </div>
 
                                   {/* Assign product row */}

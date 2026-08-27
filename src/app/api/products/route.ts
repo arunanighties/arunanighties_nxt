@@ -26,8 +26,12 @@ export async function POST(request: NextRequest) {
     const base = (body?.data && typeof body.data === "object") ? body.data : body;
     const { name, description, imageUrl, images, stock, categoryId, rating, reviewCount, reviewText, inventory, sizes } = base ?? {};
 
-    if (!name || typeof name !== "string") {
+    if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json({ error: "Product name is required" }, { status: 400 });
+    }
+
+    if (!description || typeof description !== "string" || !description.trim()) {
+      return NextResponse.json({ error: "Product description is required" }, { status: 400 });
     }
 
     let finalInventory = inventory;
