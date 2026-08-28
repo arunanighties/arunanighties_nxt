@@ -125,33 +125,47 @@ function DetailGallery({
   let displayList: string[] = [];
 
   if (media && typeof media === "object") {
-    let colorImgs: string[] = [];
     let featuredImgs: string[] = [];
+    let selectedColorImgs: string[] = [];
+    let otherColorImgs: string[] = [];
 
     if (Array.isArray(media.featuredImages) && media.featuredImages.length > 0) {
       featuredImgs = media.featuredImages.map((img: any) => img.urls?.gallery || img.urls?.card).filter(Boolean);
     }
 
-    if (selectedColor) {
-      const cv = media.colorVariants?.find(
-        (c: any) => c.color?.toLowerCase().trim() === selectedColor.toLowerCase().trim()
-      );
-      if (cv && Array.isArray(cv.images) && cv.images.length > 0) {
-        colorImgs = cv.images.map((img: any) => img.urls?.gallery || img.urls?.card).filter(Boolean);
+    if (Array.isArray(media.colorVariants)) {
+      const targetColor = selectedColor ? selectedColor.toLowerCase().trim() : "";
+      for (const cv of media.colorVariants) {
+        const cvColorName = (cv.color || "").toLowerCase().trim();
+        const imgs = (cv.images || []).map((img: any) => img.urls?.gallery || img.urls?.card).filter(Boolean);
+        
+        if (targetColor && cvColorName === targetColor) {
+          selectedColorImgs.push(...imgs);
+        } else {
+          otherColorImgs.push(...imgs);
+        }
       }
     }
 
-    if (colorImgs.length > 0) {
-      const combined = [...colorImgs];
-      for (const fImg of featuredImgs) {
-        if (!combined.includes(fImg)) {
-          combined.push(fImg);
+    const combined: string[] = [];
+    const addImgs = (list: string[]) => {
+      for (const url of list) {
+        if (url && !combined.includes(url)) {
+          combined.push(url);
         }
       }
-      displayList = combined;
-    } else if (featuredImgs.length > 0) {
-      displayList = featuredImgs;
+    };
+
+    if (selectedColorImgs.length > 0) {
+      addImgs(selectedColorImgs);
+      addImgs(featuredImgs);
+      addImgs(otherColorImgs);
+    } else {
+      addImgs(featuredImgs);
+      addImgs(otherColorImgs);
     }
+
+    displayList = combined;
   }
 
   if (displayList.length === 0) {
