@@ -16,8 +16,9 @@ interface ProductMediaManagerProps {
   productId?: number;
   media: ProductMediaSchema;
   inventory: Record<string, Record<string, { hex: string; qty: number; price?: number; mrp?: number }>>;
-  onChange: (media: ProductMediaSchema, pendingFiles?: PendingMediaFile[]) => void;
-  adminToken: string;
+  onChange: (media: ProductMediaSchema, pendingFiles?: PendingMediaFile[], pendingDeletions?: string[]) => void;
+  adminToken?: string;
+  pendingDeletions?: string[];
 }
 
 function getApiBase() {
@@ -31,12 +32,32 @@ function genId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function cloneMediaSchema(media?: ProductMediaSchema): ProductMediaSchema {
+  const base = media || { featuredImages: [], colorVariants: [] };
+  return {
+    featuredImages: (base.featuredImages || []).map((img: LocalProductImageItem) => ({
+      ...img,
+      urls: img.urls ? { ...img.urls } : { card: "", gallery: "" },
+      file: img.file,
+    })),
+    colorVariants: (base.colorVariants || []).map((cv) => ({
+      ...cv,
+      images: (cv.images || []).map((img: LocalProductImageItem) => ({
+        ...img,
+        urls: img.urls ? { ...img.urls } : { card: "", gallery: "" },
+        file: img.file,
+      })),
+    })),
+  };
+}
+
 export function ProductMediaManager({
   productId,
   media,
   inventory,
   onChange,
   adminToken,
+  pendingDeletions = [],
 }: ProductMediaManagerProps) {
   const [uploadingTarget, setUploadingTarget] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -83,7 +104,7 @@ export function ProductMediaManager({
     return files;
   };
 
-  const handleFileUpload = async (file: File, target: "featured" | "color", colorName?: string) => {
+  const handleFileUpload = (file: File, target: "featured" | "color", colorName?: string) => {
     setErrorMsg(null);
     if (!file) return;
 
@@ -92,122 +113,75 @@ export function ProductMediaManager({
       return;
     }
 
-    // ── NEW PRODUCT MODE (No productId yet) ──────────────────────
-    if (!productId) {
-      const previewUrl = URL.createObjectURL(file);
-      const newItem: LocalProductImageItem = {
-        id: genId(),
-        file,
-        urls: {
-          card: previewUrl,
-          gallery: previewUrl,
-          original: previewUrl,
-        },
-        sortOrder: Date.now(),
-      };
+    const previewUrl = URL.createObjectURL(file);
+    const newItem: LocalProductImageItem = {
+      id: genId(),
+      file,
+      urls: {
+        card: previewUrl,
+        gallery: previewUrl,
+        original: previewUrl,
+      },
+      sortOrder: Date.now(),
+    };
 
-      const nextMedia: ProductMediaSchema = JSON.parse(JSON.stringify(media || { featuredImages: [], colorVariants: [] }));
+    const nextMedia: ProductMediaSchema = cloneMediaSchema(media);
 
-      if (target === "featured") {
-        if ((nextMedia.featuredImages || []).length >= 3) {
-          setErrorMsg("Maximum limit of 3 featured images reached.");
-          return;
-        }
-        nextMedia.featuredImages.push(newItem);
-      } else if (colorName) {
-        let cv = nextMedia.colorVariants.find((c) => c.color.toLowerCase().trim() === colorName.toLowerCase().trim());
-        if (!cv) {
-          cv = { color: colorName.trim(), images: [] };
-          nextMedia.colorVariants.push(cv);
-        }
-        if (cv.images.length >= 5) {
-          setErrorMsg(`Maximum limit of 5 images for color '${colorName}' reached.`);
-          return;
-        }
-        cv.images.push(newItem);
+    if (target === "featured") {
+      if ((nextMedia.featuredImages || []).length >= 3) {
+        setErrorMsg("Maximum limit of 3 featured images reached.");
+        return;
       }
-
-      onChange(nextMedia, extractPendingFiles(nextMedia));
-      return;
+      nextMedia.featuredImages.push(newItem);
+    } else if (colorName) {
+      let cv = nextMedia.colorVariants.find((c) => c.color.toLowerCase().trim() === colorName.toLowerCase().trim());
+      if (!cv) {
+        cv = { color: colorName.trim(), images: [] };
+        nextMedia.colorVariants.push(cv);
+      }
+      if (cv.images.length >= 5) {
+        setErrorMsg(`Maximum limit of 5 images for color '${colorName}' reached.`);
+        return;
+      }
+      cv.images.push(newItem);
     }
 
-    // ── EDIT PRODUCT MODE (Existing productId) ────────────────────
-    const uploadKey = target === "featured" ? "featured" : `color-${colorName}`;
-    setUploadingTarget(uploadKey);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("target", target);
-      if (colorName) formData.append("color", colorName);
-
-      const res = await fetch(`${getApiBase()}/api/products/${productId}/media`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${adminToken}`,
-        },
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to upload image.");
-      }
-
-      if (data.media) {
-        onChange(data.media, extractPendingFiles(data.media));
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Failed to upload image.");
-    } finally {
-      setUploadingTarget(null);
-    }
+    onChange(nextMedia, extractPendingFiles(nextMedia), pendingDeletions);
   };
 
-  const handleDeleteImage = async (imageId: string) => {
+  const handleDeleteImage = (imageId: string) => {
     setErrorMsg(null);
+    const nextMedia: ProductMediaSchema = cloneMediaSchema(media);
+    let targetItem: LocalProductImageItem | undefined;
 
-    // ── NEW PRODUCT MODE (Delete from local state) ──────────────────
-    if (!productId) {
-      const nextMedia: ProductMediaSchema = JSON.parse(JSON.stringify(media || { featuredImages: [], colorVariants: [] }));
-      const featuredIdx = nextMedia.featuredImages.findIndex((img) => img.id === imageId);
-      if (featuredIdx !== -1) {
-        nextMedia.featuredImages.splice(featuredIdx, 1);
-      } else {
-        for (const cv of nextMedia.colorVariants) {
-          const idx = cv.images.findIndex((img) => img.id === imageId);
-          if (idx !== -1) {
-            cv.images.splice(idx, 1);
-            break;
-          }
+    const featuredIdx = nextMedia.featuredImages.findIndex((img) => img.id === imageId);
+    if (featuredIdx !== -1) {
+      targetItem = nextMedia.featuredImages[featuredIdx] as LocalProductImageItem;
+      nextMedia.featuredImages.splice(featuredIdx, 1);
+    } else {
+      for (const cv of nextMedia.colorVariants) {
+        const idx = cv.images.findIndex((img) => img.id === imageId);
+        if (idx !== -1) {
+          targetItem = cv.images[idx] as LocalProductImageItem;
+          cv.images.splice(idx, 1);
+          break;
         }
       }
-      onChange(nextMedia, extractPendingFiles(nextMedia));
-      return;
     }
 
-    // ── EDIT PRODUCT MODE (Delete from R2 server) ──────────────────
-    try {
-      const res = await fetch(`${getApiBase()}/api/products/${productId}/media?imageId=${encodeURIComponent(imageId)}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${adminToken}`,
-        },
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to delete image.");
-
-      if (data.media) {
-        onChange(data.media, extractPendingFiles(data.media));
+    // Track pending deletion if deleting an existing uploaded image (no local file)
+    let nextDeletions = [...pendingDeletions];
+    if (targetItem && !targetItem.file && imageId) {
+      if (!nextDeletions.includes(imageId)) {
+        nextDeletions.push(imageId);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Failed to delete image.");
     }
+
+    onChange(nextMedia, extractPendingFiles(nextMedia), nextDeletions);
   };
 
-  const handleMoveImage = async (target: "featured" | "color", imageId: string, direction: "left" | "right", colorName?: string) => {
-    const nextMedia: ProductMediaSchema = JSON.parse(JSON.stringify(media || { featuredImages: [], colorVariants: [] }));
+  const handleMoveImage = (target: "featured" | "color", imageId: string, direction: "left" | "right", colorName?: string) => {
+    const nextMedia: ProductMediaSchema = cloneMediaSchema(media);
 
     let list: ProductImageItem[] = [];
     if (target === "featured") {
@@ -227,18 +201,7 @@ export function ProductMediaManager({
     list[idx] = list[newIdx];
     list[newIdx] = temp;
 
-    onChange(nextMedia, extractPendingFiles(nextMedia));
-
-    if (productId) {
-      await fetch(`${getApiBase()}/api/products/${productId}/media`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${adminToken}`,
-        },
-        body: JSON.stringify({ media: nextMedia }),
-      });
-    }
+    onChange(nextMedia, extractPendingFiles(nextMedia), pendingDeletions);
   };
 
   return (
@@ -263,15 +226,15 @@ export function ProductMediaManager({
         </div>
       )}
 
-      {/* ── 1. FEATURED IMAGES SECTION (MAX 3) ────────────────────── */}
+      {/* ── 1. FEATURED IMAGES SECTION (MIN 2, MAX 3) ────────────────────── */}
       <div className="bg-white border border-pink-100 rounded-xl p-4 space-y-3 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <span className="text-xs font-bold text-rose-900 uppercase">Featured Images</span>
-            <p className="text-[11px] text-muted-foreground">Main card & search thumbnail images</p>
+            <p className="text-[11px] text-muted-foreground">Main card &amp; search thumbnail images <span className="font-semibold text-rose-500">(Min 2, Max 3)</span></p>
           </div>
-          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${featured.length >= 3 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>
-            {featured.length} / 3
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${featured.length < 2 ? "bg-amber-100 text-amber-800 border border-amber-200" : "bg-green-100 text-green-700 border border-green-200"}`}>
+            {featured.length} / 3 {featured.length < 2 ? "(Min 2)" : "✓"}
           </span>
         </div>
 
@@ -348,11 +311,13 @@ export function ProductMediaManager({
         </div>
       </div>
 
-      {/* ── 2. COLOR VARIANT IMAGES SECTION (MAX 5 PER COLOR) ──────── */}
+      {/* ── 2. COLOR VARIANT IMAGES SECTION (MIN 1, MAX 5 PER COLOR) ──────── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-bold text-rose-900 uppercase">Color Variant Gallery Images</h4>
-          <span className="text-[10px] font-medium text-rose-400">Max 5 images per color</span>
+          <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-1 rounded-md border border-pink-200">
+            Min 1, Max 5 images per color
+          </span>
         </div>
 
         {colorNames.length === 0 ? (
@@ -374,8 +339,8 @@ export function ProductMediaManager({
                     <span className="w-4 h-4 rounded-full border border-gray-200 shadow-sm" style={{ backgroundColor: hex }} />
                     <span className="text-xs font-bold text-rose-900">{colorName} Color Gallery</span>
                   </div>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${images.length >= 5 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>
-                    {images.length} / 5
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${images.length < 1 ? "bg-red-100 text-red-700 border border-red-200" : "bg-green-100 text-green-700 border border-green-200"}`}>
+                    {images.length} / 5 {images.length < 1 ? "(Min 1)" : "✓"}
                   </span>
                 </div>
 

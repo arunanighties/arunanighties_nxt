@@ -1241,6 +1241,12 @@ export default function AdminDashboard() {
   const [editImages, setEditImages] = useState<string[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [editFormErrors, setEditFormErrors] = useState<Record<string, string>>({});
+  const [editPendingMediaFiles, setEditPendingMediaFiles] = useState<PendingMediaFile[]>([]);
+  const [editPendingDeleteIds, setEditPendingDeleteIds] = useState<string[]>([]);
+  const [isUpdatingProduct, setIsUpdatingProduct] = useState(false);
+  const [editProgressText, setEditProgressText] = useState("");
+  const [editUploadIndex, setEditUploadIndex] = useState(0);
+  const [editTotalUploadFiles, setEditTotalUploadFiles] = useState(0);
 
 
   // Delete confirm modal
@@ -1412,8 +1418,8 @@ export default function AdminDashboard() {
     if (!form.description.trim()) errors.description = "Product description is required.";
 
     const featuredCount = (newProductMedia?.featuredImages || []).length;
-    if (featuredCount < 2) {
-      errors.featuredImages = "At least 2 featured product images are required.";
+    if (featuredCount < 2 || featuredCount > 3) {
+      errors.featuredImages = "At least 2 and at most 3 featured product images are required.";
     }
 
     const uniqueColorNames = new Set<string>();
@@ -1431,21 +1437,21 @@ export default function AdminDashboard() {
 
     const colorNamesArr = Array.from(uniqueColorNames);
     if (colorNamesArr.length === 0) {
-      errors.colorVariants = "Please add at least one color variation and upload at least 2 images per color.";
+      errors.colorVariants = "Please add at least one color variation and upload between 1 and 5 images per color.";
     } else {
-      const missingColorImages: string[] = [];
+      const invalidColorImages: string[] = [];
       colorNamesArr.forEach((colorName) => {
         const cvObj = (newProductMedia?.colorVariants || []).find(
           (c: any) => c.color?.toLowerCase().trim() === colorName.toLowerCase().trim()
         );
         const count = (cvObj?.images || []).length;
-        if (count < 2) {
-          missingColorImages.push(`${colorName} (${count}/2 images)`);
+        if (count < 1 || count > 5) {
+          invalidColorImages.push(`${colorName} (${count} images)`);
         }
       });
 
-      if (missingColorImages.length > 0) {
-        errors.colorVariants = `Each color variant must have at least 2 images. Missing: ${missingColorImages.join(", ")}.`;
+      if (invalidColorImages.length > 0) {
+        errors.colorVariants = `Each color variant must have between 1 and 5 images. Issue with: ${invalidColorImages.join(", ")}.`;
       }
     }
 
@@ -1542,9 +1548,14 @@ export default function AdminDashboard() {
 
   const openEditModal = (product: ProductRow) => {
     setEditFormErrors({});
-    setEditingProduct(product);
+    setEditPendingMediaFiles([]);
+    setEditPendingDeleteIds([]);
+    setIsUpdatingProduct(false);
+    setEditProgressText("");
+    setEditUploadIndex(0);
+    setEditTotalUploadFiles(0);
 
-    // Safe JSON parsing for MySQL text columns
+    // Safe JSON parsing for MySQL / SQLite text columns
     let safeSizes = product.sizes;
     if (typeof safeSizes === "string") {
       try { safeSizes = JSON.parse(safeSizes); } catch { safeSizes = []; }
@@ -1562,6 +1573,26 @@ export default function AdminDashboard() {
       try { safeImages = JSON.parse(safeImages); } catch { safeImages = []; }
     }
     if (!Array.isArray(safeImages)) safeImages = [];
+
+    let safeMedia = (product as any).media;
+    if (typeof safeMedia === "string") {
+      try { safeMedia = JSON.parse(safeMedia); } catch { safeMedia = { featuredImages: [], colorVariants: [] }; }
+    }
+    if (!safeMedia || typeof safeMedia !== "object") {
+      safeMedia = { featuredImages: [], colorVariants: [] };
+    }
+    if (!Array.isArray((safeMedia as any).featuredImages)) (safeMedia as any).featuredImages = [];
+    if (!Array.isArray((safeMedia as any).colorVariants)) (safeMedia as any).colorVariants = [];
+
+    const preparedProduct = {
+      ...product,
+      sizes: safeSizes,
+      inventory: safeInventory,
+      images: safeImages,
+      media: safeMedia as any,
+    };
+
+    setEditingProduct(preparedProduct);
 
     setEditForm({
       name: product.name,
@@ -1581,6 +1612,47 @@ export default function AdminDashboard() {
     if (!editingProduct) return;
     const editErrors: Record<string, string> = {};
     if (!editForm.name.trim()) editErrors.name = "Product name is required.";
+    if (!editForm.description.trim()) editErrors.description = "Product description is required.";
+
+    const editMedia = (editingProduct as any)?.media || { featuredImages: [], colorVariants: [] };
+    const editFeatCount = (editMedia.featuredImages || []).length;
+    if (editFeatCount < 2 || editFeatCount > 3) {
+      editErrors.featuredImages = "At least 2 and at most 3 featured product images are required.";
+    }
+
+    const editUniqueColorNames = new Set<string>();
+    if (editForm.inventory && typeof editForm.inventory === "object") {
+      Object.values(editForm.inventory).forEach((colorGroup) => {
+        if (colorGroup && typeof colorGroup === "object") {
+          Object.keys(colorGroup).forEach((colorName) => {
+            if (colorName && colorName.trim()) {
+              editUniqueColorNames.add(colorName.trim());
+            }
+          });
+        }
+      });
+    }
+
+    const editColorNamesArr = Array.from(editUniqueColorNames);
+    if (editColorNamesArr.length === 0) {
+      editErrors.colorVariants = "Please add at least one color variation and upload between 1 and 5 images per color.";
+    } else {
+      const invalidEditColorImages: string[] = [];
+      editColorNamesArr.forEach((colorName) => {
+        const cvObj = (editMedia.colorVariants || []).find(
+          (c: any) => c.color?.toLowerCase().trim() === colorName.toLowerCase().trim()
+        );
+        const count = (cvObj?.images || []).length;
+        if (count < 1 || count > 5) {
+          invalidEditColorImages.push(`${colorName} (${count} images)`);
+        }
+      });
+
+      if (invalidEditColorImages.length > 0) {
+        editErrors.colorVariants = `Each color variant must have between 1 and 5 images. Issue with: ${invalidEditColorImages.join(", ")}.`;
+      }
+    }
+
     const editRatingVal = parseFloat(editForm.rating);
     if (isNaN(editRatingVal) || editRatingVal < 1 || editRatingVal > 5) editErrors.rating = "Rating must be between 1.0 and 5.0.";
     const editStockVal = parseInt(editForm.stock, 10);
@@ -1594,37 +1666,125 @@ export default function AdminDashboard() {
 
     if (Object.keys(editErrors).length > 0) { setEditFormErrors(editErrors); return; }
     setEditFormErrors({});
-    const editReviewCount = Math.max(1, parseInt(editForm.reviewCount, 10) || 1);
-    setEditSaving(true);
-    patchProductMutation.mutate(
-      {
-        id: editingProduct.id,
-        data: {
-          name: editForm.name.trim(),
-          description: editForm.description.trim(),
-          images: editImages,
-          imageUrl: editImages[0] ?? "",
-          stock: parseInt(editForm.stock, 10) || 0,
-          rating: editForm.rating || "4.3",
-          reviewCount: editReviewCount,
-          reviewText: editForm.reviewText.trim(),
-          sizes: editForm.sizes,
-          inventory: editForm.inventory,
-        } as any,
-      },
-      {
-        onSuccess: async () => {
-          toast({ title: "Product updated!", description: `"${editForm.name}" saved successfully.` });
-          setEditingProduct(null);
-          queryClient.invalidateQueries();
-          await loadStats();
-        },
-        onError: (err) => {
-          toast({ variant: "destructive", title: "Update failed", description: (err as any).message });
-        },
-        onSettled: () => setEditSaving(false),
+
+    setIsUpdatingProduct(true);
+    setEditProgressText("Saving updates...");
+    setEditUploadIndex(0);
+    const totalFiles = editPendingMediaFiles.length;
+    setEditTotalUploadFiles(totalFiles);
+    const token = localStorage.getItem("adminToken") || "";
+    const productId = editingProduct.id;
+
+    try {
+      // 1. Process pending deletions from R2
+      if (editPendingDeleteIds.length > 0) {
+        setEditProgressText(`Removing ${editPendingDeleteIds.length} deleted image(s)...`);
+        for (const imageId of editPendingDeleteIds) {
+          try {
+            await fetch(`${apiBase()}/api/products/${productId}/media?imageId=${encodeURIComponent(imageId)}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          } catch (err) {
+            console.error("Failed to delete image from R2:", err);
+          }
+        }
       }
-    );
+
+      // 2. Upload new pending media files to R2
+      if (totalFiles > 0) {
+        for (let i = 0; i < totalFiles; i++) {
+          const item = editPendingMediaFiles[i];
+          setEditUploadIndex(i + 1);
+          const targetLabel = item.target === "featured" ? "featured image" : `${item.colorName || ""} color image`;
+          setEditProgressText(`Uploading ${targetLabel} (${i + 1} of ${totalFiles})...`);
+
+          try {
+            const formData = new FormData();
+            formData.append("file", item.file);
+            formData.append("target", item.target);
+            if (item.colorName) formData.append("color", item.colorName);
+
+            await fetch(`${apiBase()}/api/products/${productId}/media`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+              body: formData,
+            });
+          } catch (e) {
+            console.error("Failed to upload image file to R2:", e);
+          }
+        }
+      }
+
+      // 3. Finalize media object by stripping local DOM file objects
+      setEditProgressText("Finalizing changes...");
+      const editReviewCount = Math.max(1, parseInt(editForm.reviewCount, 10) || 1);
+      const currentMedia = (editingProduct as any)?.media || { featuredImages: [], colorVariants: [] };
+      const cleanedMedia = {
+        featuredImages: (currentMedia.featuredImages || []).map((img: any) => {
+          const { file, ...rest } = img;
+          return rest;
+        }),
+        colorVariants: (currentMedia.colorVariants || []).map((cv: any) => ({
+          ...cv,
+          images: (cv.images || []).map((img: any) => {
+            const { file, ...rest } = img;
+            return rest;
+          }),
+        })),
+      };
+
+      setEditSaving(true);
+      patchProductMutation.mutate(
+        {
+          id: productId,
+          data: {
+            name: editForm.name.trim(),
+            description: editForm.description.trim(),
+            images: editImages,
+            imageUrl: editImages[0] ?? "",
+            stock: parseInt(editForm.stock, 10) || 0,
+            rating: editForm.rating || "4.3",
+            reviewCount: editReviewCount,
+            reviewText: editForm.reviewText.trim(),
+            sizes: editForm.sizes,
+            inventory: editForm.inventory,
+            media: cleanedMedia,
+          } as any,
+        },
+        {
+          onSuccess: async () => {
+            toast({ title: "Product updated!", description: `"${editForm.name}" saved successfully.` });
+            setEditingProduct(null);
+            setEditPendingMediaFiles([]);
+            setEditPendingDeleteIds([]);
+            setIsUpdatingProduct(false);
+            setEditProgressText("");
+            setEditUploadIndex(0);
+            setEditTotalUploadFiles(0);
+            queryClient.invalidateQueries();
+            await loadStats();
+          },
+          onError: (err) => {
+            setIsUpdatingProduct(false);
+            setEditProgressText("");
+            setEditUploadIndex(0);
+            setEditTotalUploadFiles(0);
+            toast({ variant: "destructive", title: "Update failed", description: (err as any).message });
+          },
+          onSettled: () => {
+            setEditSaving(false);
+            setIsUpdatingProduct(false);
+          },
+        }
+      );
+    } catch (error: any) {
+      setIsUpdatingProduct(false);
+      setEditProgressText("");
+      setEditUploadIndex(0);
+      setEditTotalUploadFiles(0);
+      toast({ variant: "destructive", title: "Update failed", description: error.message });
+    }
   };
 
   const handleDeleteProduct = (id: number, name: string) => {
@@ -2488,7 +2648,8 @@ export default function AdminDashboard() {
                         const isFormValid = (() => {
                           if (!form.name.trim()) return false;
                           if (!form.description.trim()) return false;
-                          if ((newProductMedia?.featuredImages || []).length < 2) return false;
+                          const featLen = (newProductMedia?.featuredImages || []).length;
+                          if (featLen < 2 || featLen > 3) return false;
 
                           const uniqueColors = new Set<string>();
                           if (form.inventory && typeof form.inventory === "object") {
@@ -2507,7 +2668,8 @@ export default function AdminDashboard() {
                             const cvObj = (newProductMedia?.colorVariants || []).find(
                               (c: any) => c.color?.toLowerCase().trim() === colorName.toLowerCase().trim()
                             );
-                            return (cvObj?.images || []).length >= 2;
+                            const count = (cvObj?.images || []).length;
+                            return count >= 1 && count <= 5;
                           });
                           if (!allColorsValid) return false;
 
@@ -2688,7 +2850,7 @@ export default function AdminDashboard() {
                                       <span className={`text-xs font-semibold px-2 py-1 rounded-full flex-shrink-0 ${product.stock === 0 ? "bg-red-100 text-red-600" : product.stock < 5 ? "bg-orange-100 text-orange-600" : "bg-green-100 text-green-700"}`}>
                                         {product.stock === 0 ? "Out" : `${product.stock} left`}
                                       </span>
-                                      <button onClick={() => openEditModal(p as ProductRow)}
+                                      <button onClick={(e) => { e.stopPropagation(); openEditModal(p as ProductRow); }}
                                         className="text-blue-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-blue-50 transition-colors flex-shrink-0" title="Edit product">
                                         <Pencil className="w-4 h-4" />
                                       </button>
@@ -2714,73 +2876,188 @@ export default function AdminDashboard() {
               </div>
 
               {/* ── Edit Product Modal ── */}
-              <Dialog open={!!editingProduct} onOpenChange={(open) => { if (!open) setEditingProduct(null); }}>
-                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle className="font-serif text-xl text-rose-900">Edit Product</DialogTitle>
-                    <DialogDescription className="text-xs text-muted-foreground">
-                      Update details below. Changes appear on the homepage instantly.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleUpdateProduct} className="space-y-4 pt-1">
-                    <div>
-                      <AdminLabel>Nighty Name *</AdminLabel>
-                      <AdminInput value={editForm.name} onChange={(v) => setEditForm(f => ({ ...f, name: v }))} placeholder="Kerala Cotton Kasavu Nighty" required />
-                    </div>
-                    <div>
-                      <ProductMediaManager
-                        productId={editingProduct?.id}
-                        media={(editingProduct as any)?.media || { featuredImages: [], colorVariants: [] }}
-                        inventory={editForm.inventory}
-                        onChange={(newMedia) => {
-                          setEditingProduct((prev: any) => prev ? { ...prev, media: newMedia } : null);
-                          queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-                        }}
-                        adminToken={localStorage.getItem("adminToken") ?? ""}
-                      />
-                    </div>
-                    <div>
-                      <AdminLabel>Overall Stock (Auto-calculated) *</AdminLabel>
-                      <AdminInput type="number" min="0" step="1" value={editForm.stock} onChange={() => { }} error={editFormErrors.stock} placeholder="0" required />
-                      <p className="text-[10px] text-rose-400 mt-1 uppercase tracking-tighter">Matches sum of sizes below</p>
-                    </div>
-                    <div className="col-span-2">
-                      <ProductVariations
-                        inventory={editForm.inventory}
-                        onChange={(inv) => setEditForm(f => ({ ...f, inventory: inv }))}
-                        error={editFormErrors.sizes}
-                      />
-                    </div>
+              <Dialog open={!!editingProduct} onOpenChange={(open) => { if (!open && !isUpdatingProduct && !editSaving) setEditingProduct(null); }}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 border-none bg-transparent shadow-none">
+                  <div className="bg-white rounded-2xl p-6 border border-pink-100 shadow-2xl relative overflow-hidden">
+                    {/* Loading Animation Overlay for Edit Modal */}
+                    {isUpdatingProduct && (
+                      <div className="absolute inset-0 bg-white/95 backdrop-blur-md z-50 rounded-2xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-300 border border-pink-100 shadow-xl">
+                        <div className="relative mb-5">
+                          <div className="w-16 h-16 rounded-full border-4 border-pink-100 border-t-primary animate-spin" />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Sparkles className="w-7 h-7 text-primary animate-pulse" />
+                          </div>
+                        </div>
 
-                    <div>
-                      <AdminLabel>Description</AdminLabel>
-                      <textarea rows={2} value={editForm.description} onChange={(e) => setEditForm(f => ({ ...f, description: e.target.value }))}
-                        className="w-full border border-pink-200 rounded-xl px-3 py-2.5 text-sm bg-pink-50 focus:outline-none focus:ring-2 focus:ring-primary/30 text-rose-900 placeholder:text-rose-300 resize-none" />
-                    </div>
-                    <div className="border-t border-pink-100 pt-3">
-                      <p className="text-xs font-semibold text-rose-500 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Star className="w-3.5 h-3.5" /> Ratings &amp; Reviews</p>
-                      <div className="grid grid-cols-2 gap-3 mb-3">
-                        <div><AdminLabel>Avg. Rating (1.0 – 5.0) *</AdminLabel><AdminInput type="number" min="1" max="5" step="0.1" value={editForm.rating} onChange={(v) => { setEditForm(f => ({ ...f, rating: v })); setEditFormErrors(fe => ({ ...fe, rating: "" })); }} placeholder="4.3" error={editFormErrors.rating} /></div>
-                        <div><AdminLabel>No. of Reviews (min 1)</AdminLabel><AdminInput type="number" min="1" step="1" value={editForm.reviewCount} onChange={(v) => setEditForm(f => ({ ...f, reviewCount: String(Math.max(1, parseInt(v, 10) || 10)) }))} placeholder="10" /></div>
+                        <h3 className="text-base font-bold text-rose-900 mb-1.5">Updating Product</h3>
+                        <p className="text-xs text-rose-600 font-medium mb-4 max-w-xs leading-relaxed">{editProgressText || "Please wait while we save your changes..."}</p>
+
+                        {editTotalUploadFiles > 0 && (
+                          <div className="w-full max-w-xs space-y-2">
+                            <div className="w-full bg-pink-100 rounded-full h-2 overflow-hidden shadow-inner">
+                              <div
+                                className="bg-primary h-full rounded-full transition-all duration-300 shadow-sm"
+                                style={{ width: `${Math.min(100, Math.round((editUploadIndex / editTotalUploadFiles) * 100))}%` }}
+                              />
+                            </div>
+                            <div className="flex justify-between text-[11px] font-bold text-rose-500">
+                              <span>Uploading Media</span>
+                              <span>{editUploadIndex} / {editTotalUploadFiles} ({Math.min(100, Math.round((editUploadIndex / editTotalUploadFiles) * 100))}%)</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <AdminLabel>Review Text</AdminLabel>
-                        <textarea rows={2} value={editForm.reviewText} onChange={(e) => setEditForm(f => ({ ...f, reviewText: e.target.value }))}
-                          placeholder="e.g. 'Very soft cotton, fits perfectly!'"
-                          className="w-full border border-pink-200 rounded-xl px-3 py-2.5 text-sm bg-pink-50 focus:outline-none focus:ring-2 focus:ring-primary/30 text-rose-900 placeholder:text-rose-300 resize-none" />
-                      </div>
-                    </div>
-                    <DialogFooter className="pt-2 gap-2">
-                      <button type="button" onClick={() => setEditingProduct(null)}
-                        className="flex-1 border border-pink-200 text-rose-600 font-semibold rounded-xl py-2.5 text-sm hover:bg-pink-50">
-                        Cancel
-                      </button>
-                      <button type="submit" disabled={editSaving}
-                        className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-pink-200 text-white font-bold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2">
-                        {editSaving ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : <><Check className="w-4 h-4" />Save Changes</>}
-                      </button>
-                    </DialogFooter>
-                  </form>
+                    )}
+
+                    <DialogHeader className="mb-4">
+                      <DialogTitle className="font-serif text-xl text-rose-900">Edit Product</DialogTitle>
+                      <DialogDescription className="text-xs text-muted-foreground">
+                        Update details below. Changes appear on the homepage instantly.
+                      </DialogDescription>
+                    </DialogHeader>
+                    {(() => {
+                      const isEditFormValid = (() => {
+                        if (!editingProduct) return false;
+                        if (!editForm.name.trim()) return false;
+                        if (!editForm.description.trim()) return false;
+
+                        const currentMedia = (editingProduct as any)?.media || { featuredImages: [], colorVariants: [] };
+                        const featLen = (currentMedia.featuredImages || []).length;
+                        if (featLen < 2 || featLen > 3) return false;
+
+                        const uniqueColors = new Set<string>();
+                        if (editForm.inventory && typeof editForm.inventory === "object") {
+                          Object.values(editForm.inventory).forEach((colorGroup) => {
+                            if (colorGroup && typeof colorGroup === "object") {
+                              Object.keys(colorGroup).forEach((cName) => {
+                                if (cName && cName.trim()) uniqueColors.add(cName.trim());
+                              });
+                            }
+                          });
+                        }
+                        const colorList = Array.from(uniqueColors);
+                        if (colorList.length === 0) return false;
+
+                        const allColorsValid = colorList.every((colorName) => {
+                          const cvObj = (currentMedia.colorVariants || []).find(
+                            (c: any) => c.color?.toLowerCase().trim() === colorName.toLowerCase().trim()
+                          );
+                          const count = (cvObj?.images || []).length;
+                          return count >= 1 && count <= 5;
+                        });
+                        if (!allColorsValid) return false;
+
+                        const ratingVal = parseFloat(editForm.rating);
+                        if (isNaN(ratingVal) || ratingVal < 1 || ratingVal > 5) return false;
+
+                        const stockVal = parseInt(editForm.stock, 10);
+                        if (isNaN(stockVal) || stockVal < 0) return false;
+
+                        const calculatedEditStock = Object.keys(editForm.inventory).length > 0
+                          ? Object.values(editForm.inventory).reduce((s, colors) => s + Object.values(colors).reduce((c, val) => c + val.qty, 0), 0)
+                          : editForm.sizes.reduce((sum, s) => sum + (s.quantity || 0), 0);
+                        if (stockVal !== calculatedEditStock) return false;
+
+                        if (editForm.sizes.length === 0 && Object.keys(editForm.inventory).length === 0) return false;
+
+                        return true;
+                      })();
+
+                      return (
+                        <form onSubmit={handleUpdateProduct} className="space-y-4 pt-1">
+                          <div>
+                            <AdminLabel>Nighty Name *</AdminLabel>
+                            <AdminInput
+                              value={editForm.name}
+                              onChange={(v) => { setEditForm(f => ({ ...f, name: v })); setEditFormErrors(fe => ({ ...fe, name: "" })); }}
+                              placeholder="Kerala Cotton Kasavu Nighty"
+                              error={editFormErrors.name}
+                              required
+                            />
+                          </div>
+
+                          <div className="col-span-2">
+                            <ProductVariations
+                              inventory={editForm.inventory}
+                              onChange={(inv) => { setEditForm(f => ({ ...f, inventory: inv })); setEditFormErrors(fe => ({ ...fe, sizes: "", colorVariants: "" })); }}
+                              error={editFormErrors.sizes || editFormErrors.colorVariants}
+                            />
+                          </div>
+
+                          <div>
+                            <ProductMediaManager
+                              productId={editingProduct?.id}
+                              media={(editingProduct as any)?.media || { featuredImages: [], colorVariants: [] }}
+                              inventory={editForm.inventory}
+                              pendingDeletions={editPendingDeleteIds}
+                              onChange={(newMedia, pendingFiles, pendingDeletions) => {
+                                setEditingProduct((prev: any) => prev ? { ...prev, media: newMedia } : null);
+                                if (pendingFiles) setEditPendingMediaFiles(pendingFiles);
+                                if (pendingDeletions) setEditPendingDeleteIds(pendingDeletions);
+                                setEditFormErrors(fe => ({ ...fe, featuredImages: "", colorVariants: "" }));
+                              }}
+                              adminToken={localStorage.getItem("adminToken") ?? ""}
+                            />
+                            {editFormErrors.featuredImages && (
+                              <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium bg-red-50 p-2.5 rounded-xl border border-red-200">
+                                <span>⚠</span> {editFormErrors.featuredImages}
+                              </p>
+                            )}
+                            {editFormErrors.colorVariants && (
+                              <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1 font-medium bg-red-50 p-2.5 rounded-xl border border-red-200">
+                                <span>⚠</span> {editFormErrors.colorVariants}
+                              </p>
+                            )}
+                          </div>
+
+                          <div>
+                            <AdminLabel>Overall Stock (Auto-calculated) *</AdminLabel>
+                            <AdminInput type="number" min="0" step="1" value={editForm.stock} onChange={() => { }} error={editFormErrors.stock} placeholder="0" required />
+                            <p className="text-[10px] text-rose-400 mt-1 uppercase tracking-tighter">Matches sum of sizes above</p>
+                          </div>
+
+                          <div>
+                            <AdminLabel>Description *</AdminLabel>
+                            <textarea rows={2} value={editForm.description} onChange={(e) => { setEditForm(f => ({ ...f, description: e.target.value })); setEditFormErrors(fe => ({ ...fe, description: "" })); }}
+                              placeholder="Fabric, style, size details..."
+                              className={`w-full border rounded-xl px-3 py-2.5 text-sm bg-pink-50 focus:outline-none focus:ring-2 text-rose-900 placeholder:text-rose-300 resize-none transition-colors ${editFormErrors.description ? "border-red-400 focus:ring-red-300/40 bg-red-50/30" : "border-pink-200 focus:ring-primary/30"}`} />
+                            {editFormErrors.description && (
+                              <p className="text-xs text-red-600 mt-1 flex items-center gap-1 font-medium">
+                                <span>⚠</span> {editFormErrors.description}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="border-t border-pink-100 pt-3">
+                            <p className="text-xs font-semibold text-rose-500 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Star className="w-3.5 h-3.5" /> Ratings &amp; Reviews</p>
+                            <div className="grid grid-cols-2 gap-3 mb-3">
+                              <div><AdminLabel>Avg. Rating (1.0 – 5.0) *</AdminLabel><AdminInput type="number" min="1" max="5" step="0.1" value={editForm.rating} onChange={(v) => { setEditForm(f => ({ ...f, rating: v })); setEditFormErrors(fe => ({ ...fe, rating: "" })); }} placeholder="4.3" error={editFormErrors.rating} /></div>
+                              <div><AdminLabel>No. of Reviews (min 1)</AdminLabel><AdminInput type="number" min="1" step="1" value={editForm.reviewCount} onChange={(v) => setEditForm(f => ({ ...f, reviewCount: String(Math.max(1, parseInt(v, 10) || 10)) }))} placeholder="10" /></div>
+                            </div>
+                            <div>
+                              <AdminLabel>Review Text</AdminLabel>
+                              <textarea rows={2} value={editForm.reviewText} onChange={(e) => setEditForm(f => ({ ...f, reviewText: e.target.value }))}
+                                placeholder="e.g. 'Very soft cotton, fits perfectly!'"
+                                className="w-full border border-pink-200 rounded-xl px-3 py-2.5 text-sm bg-pink-50 focus:outline-none focus:ring-2 focus:ring-primary/30 text-rose-900 placeholder:text-rose-300 resize-none" />
+                            </div>
+                          </div>
+
+                          <DialogFooter className="pt-2 gap-2">
+                            <button type="button" onClick={() => setEditingProduct(null)} disabled={isUpdatingProduct || editSaving}
+                              className="flex-1 border border-pink-200 text-rose-600 font-semibold rounded-xl py-2.5 text-sm hover:bg-pink-50 disabled:opacity-50">
+                              Cancel
+                            </button>
+                            <button type="submit" disabled={editSaving || isUpdatingProduct || !isEditFormValid}
+                              className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-pink-200/80 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 transition-all"
+                              title={!isEditFormValid ? "Please fill in all mandatory fields and upload required images to enable button." : ""}
+                            >
+                              {(editSaving || isUpdatingProduct) ? <><Loader2 className="w-4 h-4 animate-spin" />Saving Changes...</> : <><Check className="w-4 h-4" />Save Changes</>}
+                            </button>
+                          </DialogFooter>
+                        </form>
+                      );
+                    })()}
+                  </div>
                 </DialogContent>
               </Dialog>
 
